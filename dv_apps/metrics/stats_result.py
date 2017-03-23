@@ -1,5 +1,8 @@
 import StringIO
 import pandas as pd
+import logging
+logging.basicConfig(filename='logs/metrics.log',format='%(asctime)s %(levelname)s  %(message)s', datefmt='%Y-%m-%d %H:%M:%S',level=logging.DEBUG)
+
 """
 Holds the results of metrics queries from:
     StatsMakerDataverses
@@ -93,6 +96,7 @@ class StatsResult(object):
         Return an error result with an error message
         and optional http status code
         """
+        logging.error(error_message)
         d = dict(error_found=True,\
                 error_message=error_message,\
                 bad_http_status_code=bad_http_status_code)

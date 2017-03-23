@@ -133,3 +133,11 @@ miniverse/settings/test_url.txt
 miniverse/settings/test_url.py
 
 scripts/mongo/json_output
+
+.idea/miniverse.iml
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
+.idea/workspace.xml
+.idea/inspectionProfiles/Project_Default.xml
+

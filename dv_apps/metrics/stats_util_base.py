@@ -4,6 +4,7 @@ This may be used for APIs, views with visualizations, etc.
 """
 #from django.db.models.functions import TruncMonth  # 1.10
 from django.db import models
+from django.conf import settings
 
 from dv_apps.utils.date_helper import format_yyyy_mm_dd
 from dv_apps.utils import query_helper
@@ -11,6 +12,8 @@ from dv_apps.utils import query_helper
 from dv_apps.dvobjects.models import DVOBJECT_CREATEDATE_ATTR
 from dv_apps.metrics.stats_result import StatsResult
 from dv_apps.metrics.dataverse_tree_util import DataverseTreeUtil
+
+from pymongo import MongoClient
 
 class TruncMonth(models.Func):
     function = 'EXTRACT'
@@ -35,6 +38,10 @@ BYTES_ONE_MILLION = BYTES_ONE_KB * BYTES_ONE_KB
 BYTES_FIFTY_MILLION = BYTES_ONE_MILLION*50
 BYTES_ONE_HUNDRED_MILLION = BYTES_ONE_MILLION*100
 BYTES_ONE_BILLION = BYTES_ONE_MILLION**1000
+
+EASY_STATISTICS = settings.EASY_STATISTICS
+if EASY_STATISTICS:
+    client = MongoClient()
 
 class StatsMakerBase(object):
 
@@ -71,6 +78,12 @@ class StatsMakerBase(object):
 
         # load dates
         self.load_dates_from_kwargs(**kwargs)
+
+        if EASY_STATISTICS:
+            self.easy_dataset = client.get_database('dataset').data
+            self.easy_file = client.get_database('file').data
+            self.easy_logs = client.get_database('logs').data
+
 
     def add_error(self, err_msg, bad_http_status_code=None):
         self.error_found = True
@@ -323,6 +336,21 @@ class StatsMakerBase(object):
         filter_params = {}
         if self.start_date:
             filter_params['%s__gte' % date_var_name] = self.start_date
+
+        if self.end_date:
+            filter_params['%s__lte' % date_var_name] = self.end_date
+
+        if self.selected_year:
+            filter_params['%s__year' % date_var_name] = self.selected_year
+
+        return filter_params
+
+
+    def get_easy_date_filter_params(self, date_var_name=DVOBJECT_CREATEDATE_ATTR):
+
+        filter_params = {}
+        if self.start_date:
+            filter_params['start_date'] = self.start_date
 
         if self.end_date:
             filter_params['%s__lte' % date_var_name] = self.end_date

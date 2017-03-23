@@ -12,8 +12,8 @@ from dv_apps.utils.date_helper import get_month_name_abbreviation,\
 from dv_apps.dvobjects.models import DvObject, DTYPE_DATAFILE
 from dv_apps.datafiles.models import Datafile, FileMetadata
 from dv_apps.guestbook.models import GuestBookResponse, RESPONSE_TYPE_DOWNLOAD
-from dv_apps.metrics.stats_util_base import StatsMakerBase, TruncYearMonth
-from dv_apps.metrics.stats_result import StatsResult
+from dv_apps.metrics.stats_util_base import StatsMakerBase, TruncYearMonth, EASY_STATISTICS
+from dv_apps.metrics.stats_result import StatsResult, logging
 from dv_apps.dvobjects.models import DVOBJECT_CREATEDATE_ATTR
 
 FILE_TYPE_OCTET_STREAM = 'application/octet-stream'
@@ -29,7 +29,6 @@ class StatsMakerFiles(StatsMakerBase):
         end_date = string in YYYY-MM-DD format
         """
         super(StatsMakerFiles, self).__init__(**kwargs)
-
 
     def get_dataverse_params_for_guestbook(self):
         """Allow narrowing of file download stats to specific Dataverses"""
@@ -210,86 +209,146 @@ print stats_files.get_total_file_downloads().result_data
 
 
     def get_file_downloads_by_month(self, **extra_filters):
-        """
-        Using the GuestBookResponse object, find the number of file
-        downloads per month
-        """
+
         if self.was_error_found():
             return self.get_error_msg_return()
 
-        filter_params = self.get_date_filter_params(date_var_name='responsetime')
+        if EASY_STATISTICS:
+            return self.get_easy_file_downloads_by_month()
+        else:
+            return self.get_dataverse_file_downloads_by_month(**extra_filters)
 
-        filter_params.update(self.get_download_type_filter())
 
-        # Narrow down to specific Dataverses
-        filter_params.update(self.get_dataverse_params_for_guestbook())
-        if self.was_error_found():
-            return self.get_error_msg_return()
+    def get_easy_file_downloads_by_month(self, **extra_filters):
 
-        # Add extra filters, if they exist
-        count_pre_dv4_downloads = False
-        if extra_filters:
-            for k, v in extra_filters.items():
-                if k == INCLUDE_PRE_DV4_DOWNLOADS:    # skip this param
-                    count_pre_dv4_downloads = True
-                    del extra_filters[k]
-                else:
-                    filter_params[k] = v
+        # Retrieve the date parameters
+        filter_params = self.get_easy_date_filter_params()
+        start_date = filter_params["start_date"]
 
-        file_counts_by_month = GuestBookResponse.objects.exclude(\
-            responsetime__isnull=True\
-            ).filter(**filter_params\
-            ).annotate(yyyy_mm=TruncYearMonth('responsetime')\
-            ).values('yyyy_mm'\
-            ).annotate(count=models.Count('id')\
-            ).values('yyyy_mm', 'count'\
-            ).order_by('%syyyy_mm' % self.time_sort)
+        pipe = [{'$match': {'$and': [{'date': {'$gte': start_date}}, {'$or': [{'type': 'DOWNLOAD_DATASET_REQUEST'}, {'type': 'DOWNLOAD_FILE_REQUEST'}]}]}},
+                {'$group': {'_id': {'$substr': ['$date', 0, 7]},'count': {'$sum': 1}}},
+                {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
+                {'$sort': {'yyyy_mm': 1}}]
+        file_counts_by_month = list(self.easy_logs.aggregate(pipeline=pipe))
 
-        #print 'file_counts_by_month.query', file_counts_by_month.query
-        sql_query = str(file_counts_by_month.query)
+        pipe = [{'$match': {'$and': [{'date': {'$gte': start_date}}, {'$or': [{'type': 'DOWNLOAD_DATASET_REQUEST'}, {'type': 'DOWNLOAD_FILE_REQUEST'}]}]}}]
+        running_total = len(list(self.easy_logs.aggregate(pipeline=pipe)))
 
         formatted_records = []  # move from a queryset to a []
 
-        if count_pre_dv4_downloads:
-            file_running_total = self.get_file_download_start_point_include_undated(**extra_filters)
-        else:
-            file_running_total = self.get_file_download_start_point(**extra_filters)
-
-
         for d in file_counts_by_month:
+
+            year_month = d['yyyy_mm'][:7]
+            year = int(d['yyyy_mm'][:4])
+            try:
+                month = int(d['yyyy_mm'][5:7])
+            except:
+                return StatsResult.build_error_result("in converting %s (month) into an integer (in get_easy_dataset_count_by_month)" % d['yyyy_mm'][5:7])
+
             fmt_rec = OrderedDict()
-            fmt_rec['yyyy_mm'] = d['yyyy_mm'].strftime('%Y-%m')
+            fmt_rec['yyyy_mm'] = year_month
             fmt_rec['count'] = d['count']
 
-            file_running_total += d['count']
-            fmt_rec['running_total'] = file_running_total
-
-            # d['month_year'] = d['yyyy_mm'].strftime('%Y-%m')
+            # running total
+            running_total += d['count']
+            fmt_rec['running_total'] = running_total
 
             # Add year and month numbers
-            fmt_rec['year_num'] = d['yyyy_mm'].year
-            fmt_rec['month_num'] = d['yyyy_mm'].month
+            fmt_rec['year_num'] = year
+            fmt_rec['month_num'] = month
 
             # Add month name
-            month_name_found, month_name_short = get_month_name_abbreviation( d['yyyy_mm'].month)
+            month_name_found, month_name_short = get_month_name_abbreviation(month)
             if month_name_found:
-                assume_month_name_found, fmt_rec['month_name'] = get_month_name(d['yyyy_mm'].month)
+                assume_month_name_found, fmt_rec['month_name'] = get_month_name(month)
                 fmt_rec['month_name_short'] = month_name_short
             else:
-                # Log it!!!!!!
-                pass
+                logging.warning("no month name found for month %d (get_easy_file_downloads_by_month)" % month)
 
             formatted_records.append(fmt_rec)
 
         data_dict = OrderedDict()
-        data_dict['total_downloads'] = file_running_total
+        data_dict['total_downloads'] = running_total
         data_dict['record_count'] = len(formatted_records)
         data_dict['records'] = formatted_records
 
-        return StatsResult.build_success_result(data_dict, sql_query)
+        return StatsResult.build_success_result(data_dict, None)
 
 
-        #return True, formatted_records
+    def get_dataverse_file_downloads_by_month(self, **extra_filters):
+            """
+            Using the GuestBookResponse object, find the number of file
+            downloads per month
+            """
+            filter_params = self.get_date_filter_params(date_var_name='responsetime')
+
+            filter_params.update(self.get_download_type_filter())
+
+            # Narrow down to specific Dataverses
+            filter_params.update(self.get_dataverse_params_for_guestbook())
+            if self.was_error_found():
+                return self.get_error_msg_return()
+
+            # Add extra filters, if they exist
+            count_pre_dv4_downloads = False
+            if extra_filters:
+                for k, v in extra_filters.items():
+                    if k == INCLUDE_PRE_DV4_DOWNLOADS:  # skip this param
+                        count_pre_dv4_downloads = True
+                        del extra_filters[k]
+                    else:
+                        filter_params[k] = v
+
+            file_counts_by_month = GuestBookResponse.objects.exclude( \
+                responsetime__isnull=True \
+                ).filter(**filter_params \
+                         ).annotate(yyyy_mm=TruncYearMonth('responsetime') \
+                                    ).values('yyyy_mm' \
+                                             ).annotate(count=models.Count('id') \
+                                                        ).values('yyyy_mm', 'count' \
+                                                                 ).order_by('%syyyy_mm' % self.time_sort)
+
+            # print 'file_counts_by_month.query', file_counts_by_month.query
+            sql_query = str(file_counts_by_month.query)
+
+            formatted_records = []  # move from a queryset to a []
+
+            if count_pre_dv4_downloads:
+                file_running_total = self.get_file_download_start_point_include_undated(**extra_filters)
+            else:
+                file_running_total = self.get_file_download_start_point(**extra_filters)
+
+            for d in file_counts_by_month:
+                fmt_rec = OrderedDict()
+                fmt_rec['yyyy_mm'] = d['yyyy_mm'].strftime('%Y-%m')
+                fmt_rec['count'] = d['count']
+
+                file_running_total += d['count']
+                fmt_rec['running_total'] = file_running_total
+
+                # d['month_year'] = d['yyyy_mm'].strftime('%Y-%m')
+
+                # Add year and month numbers
+                fmt_rec['year_num'] = d['yyyy_mm'].year
+                fmt_rec['month_num'] = d['yyyy_mm'].month
+
+                # Add month name
+                month_name_found, month_name_short = get_month_name_abbreviation(d['yyyy_mm'].month)
+                if month_name_found:
+                    assume_month_name_found, fmt_rec['month_name'] = get_month_name(d['yyyy_mm'].month)
+                    fmt_rec['month_name_short'] = month_name_short
+                else:
+                    # Log it!!!!!!
+                    pass
+
+                formatted_records.append(fmt_rec)
+
+            data_dict = OrderedDict()
+            data_dict['total_downloads'] = file_running_total
+            data_dict['record_count'] = len(formatted_records)
+            data_dict['records'] = formatted_records
+
+            return StatsResult.build_success_result(data_dict, sql_query)
 
 
     # ----------------------------
@@ -333,6 +392,67 @@ print stats_files.get_total_file_downloads().result_data
         #
         if self.was_error_found():
             return self.get_error_msg_return()
+
+        if EASY_STATISTICS:
+            return self.get_easy_file_count_by_month()
+        else:
+            return self.get_dataverse_file_count_by_month(date_param, **extra_filters)
+
+    def get_easy_file_count_by_month(self):
+
+        # Retrieve the date parameters
+        filter_params = self.get_easy_date_filter_params()
+        start_date = filter_params["start_date"]
+
+        pipe = [{'$match': {'dateSubmitted': {'$gte': start_date}}},
+                {'$group': {'_id': {'$substr': ['$dateSubmitted', 0, 7]},'count': {'$sum': 1}}},
+                {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
+                {'$sort': {'yyyy_mm': 1}}]
+        file_counts_by_month = list(self.easy_file.aggregate(pipeline=pipe))
+
+        pipe = [{'$match': {'dateSubmitted': {'$lt': start_date}}}]
+        running_total = len(list(self.easy_file.aggregate(pipeline=pipe)))
+
+        formatted_records = []  # move from a queryset to a []
+
+        for d in file_counts_by_month:
+
+            year_month = d['yyyy_mm'][:7]
+            year = int(d['yyyy_mm'][:4])
+            month = int(d['yyyy_mm'][5:7])
+
+            fmt_rec = OrderedDict()
+            fmt_rec['yyyy_mm'] = year_month
+            fmt_rec['count'] = d['count']
+
+            # running total
+            running_total += d['count']
+            fmt_rec['running_total'] = running_total
+
+            # Add year and month numbers
+            fmt_rec['year_num'] = year
+            fmt_rec['month_num'] = month
+
+            # Add month name
+            month_name_found, month_name_short = get_month_name_abbreviation(month)
+            if month_name_found:
+                assume_month_name_found, fmt_rec['month_name'] = get_month_name(month)
+                fmt_rec['month_name_short'] = month_name_short
+            else:
+                # Log it!!!!!!
+                pass
+
+            # Add formatted record
+            formatted_records.append(fmt_rec)
+
+        data_dict = OrderedDict()
+        data_dict['record_count'] = len(formatted_records)
+        data_dict['records'] = formatted_records
+
+        return StatsResult.build_success_result(data_dict, None)
+
+
+    def get_dataverse_file_count_by_month(self, date_param, **extra_filters):
 
         # -----------------------------------
         # (1) Build query filters
@@ -415,9 +535,6 @@ print stats_files.get_total_file_downloads().result_data
         data_dict['records'] = formatted_records
 
         return StatsResult.build_success_result(data_dict, sql_query)
-
-
-        #return True, formatted_records
 
 
     '''
