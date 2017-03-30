@@ -11,10 +11,12 @@
 
           <div class="col-xs-12 col-sm-6">
 
+   {% if DEBUG %}
     <h4>admin</h4>
         <ul>
             <li><a href="{% url 'admin:index' %}">{% url 'admin:index' %}</a></li>
         </ul>
+    {% endif %}
 
     <h4>swagger</h4>
     <ul>
@@ -87,6 +89,10 @@
         {#% if DEBUG %#}
         <!-- start 2nd col -->
         <div class="col-xs-12 col-sm-6">
+            <h4>Quality Control</h4>
+                <ul>
+                    <li><a href="{% url 'view_qc_dashboard' %}">QC dash (start)</a></li>
+                </ul>
 
             <h4>experimental</h4>
             <div style="padding:0 20px;">

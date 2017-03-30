@@ -3,13 +3,13 @@ Create metrics for Datasets.
 This may be used for APIs, views with visualizations, etc.
 """
 #from django.db.models.functions import TruncMonth  # 1.10
+
 from collections import OrderedDict
 
+from django.conf import settings
 from django.db import models
 from django.db.models import F
 from django.db.models import Q
-
-from django.utils.encoding import python_2_unicode_compatible
 
 from dv_apps.utils.date_helper import get_month_name_abbreviation,\
     get_month_name,\
@@ -24,12 +24,11 @@ from dv_apps.datasetfields.models import DatasetField,\
     DatasetFieldControlledVocabularyValue,\
     ControlledVocabularyValue
 
-from dv_apps.metrics.stats_util_base import StatsMakerBase, TruncYearMonth
+from dv_apps.metrics.stats_util_base import StatsMakerBase, TruncYearMonth, EASY_STATISTICS
 from dv_apps.dvobjects.models import DvObject\
     , DTYPE_DATASET, DTYPE_DATAVERSE\
     , DVOBJECT_CREATEDATE_ATTR
-from dv_apps.metrics.stats_result import StatsResult
-
+from dv_apps.metrics.stats_result import StatsResult, logging
 
 class StatsMakerDatasets(StatsMakerBase):
 
@@ -98,7 +97,6 @@ class StatsMakerDatasets(StatsMakerBase):
         return self.get_dataset_count_by_month(date_param=DVOBJECT_CREATEDATE_ATTR,\
             **extra_filters)
 
-
     def get_dataset_counts_by_create_date_published(self):
         """
         Get # of --PUBLISHED-- datasets created each month
@@ -152,7 +150,70 @@ class StatsMakerDatasets(StatsMakerBase):
         if self.was_error_found():
             return self.get_error_msg_return()
 
-        # -----------------------------------
+        if EASY_STATISTICS:
+            return self.get_easy_dataset_count_by_month()
+        else:
+            return self.get_dataverse_dataset_count_by_month(date_param, **extra_filters)
+
+
+    def get_easy_dataset_count_by_month(self):
+
+        # Retrieve the date parameters
+        filter_params = self.get_easy_date_filter_params()
+        start_date = filter_params["start_date"]
+        pipe = [{'$match': {'EMD:dateSubmitted': {'$gte': start_date}}},
+                {'$group': {'_id': {'$substr': ['$EMD:dateSubmitted', 0, 7]},'count': {'$sum': 1}}},
+                {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
+                {'$sort': {'yyyy_mm': 1}}]
+        ds_counts_by_month = list(self.easy_dataset.aggregate(pipeline=pipe))
+
+        pipe = [{'$match': {'EMD:dateSubmitted': {'$lt': start_date}}}]
+        running_total = len(list(self.easy_dataset.aggregate(pipeline=pipe)))
+
+        formatted_records = []  # move from a queryset to a []
+
+        for d in ds_counts_by_month:
+            year_month = d['yyyy_mm'][:7]
+            year = int(d['yyyy_mm'][:4])
+            try:
+                month = int(d['yyyy_mm'][5:7])
+            except:
+                return StatsResult.build_error_result("in converting %s (month) into an integer (in get_easy_dataset_count_by_month)" % d['yyyy_mm'][5:7])
+
+            fmt_dict = OrderedDict()
+            fmt_dict['yyyy_mm'] = year_month
+            fmt_dict['count'] = d['count']
+
+            # running total
+            running_total += d['count']
+            fmt_dict['running_total'] = running_total
+
+            # Add year and month numbers
+            fmt_dict['year_num'] = year
+            fmt_dict['month_num'] = month
+
+            # Add month name
+            month_name_found, month_name_short = get_month_name_abbreviation(month)
+
+            if month_name_found:
+                assume_month_name_found, fmt_dict['month_name'] = get_month_name(month)
+                fmt_dict['month_name_short'] = month_name_short
+            else:
+                logging.warning("no month name found for month %d (get_easy_dataset_count_by_month)" % month)
+
+            # Add formatted record
+            formatted_records.append(fmt_dict)
+
+        data_dict = OrderedDict()
+        data_dict['record_count'] = len(formatted_records)
+        data_dict['records'] = formatted_records
+
+        return StatsResult.build_success_result(data_dict, None)
+
+
+    def get_dataverse_dataset_count_by_month(self, date_param, **extra_filters):
+
+         # -----------------------------------
         # (1) Build query filters
         # -----------------------------------
 
@@ -164,10 +225,9 @@ class StatsMakerDatasets(StatsMakerBase):
             exclude_params = { '%s__isnull' % date_param : True}
 
         # Retrieve the date parameters
-        #
         filter_params = self.get_date_filter_params()
 
-        # Add extra filters from kwargs
+         # Add extra filters from kwargs
         #
         if extra_filters:
             for k, v in extra_filters.items():
@@ -223,8 +283,7 @@ class StatsMakerDatasets(StatsMakerBase):
                 assume_month_name_found, fmt_dict['month_name'] = get_month_name(d['yyyy_mm'].month)
                 fmt_dict['month_name_short'] = month_name_short
             else:
-                # Log it!!!!!!
-                pass
+                logging.warning("no month name found for month %d (get_dataverse_dataset_count_by_month)" % d['yyyy_mm'].month)
 
             # Add formatted record
             formatted_records.append(fmt_dict)
@@ -310,7 +369,7 @@ class StatsMakerDatasets(StatsMakerBase):
                             , 'affiliation'\
                     ).order_by('create_date', 'name')
 
-        sql_query = str(q.query)
+        sql_query = str(dv_info_list.query)
 
         records = []
         for dv_info in dv_info_list:
@@ -341,8 +400,58 @@ class StatsMakerDatasets(StatsMakerBase):
         if self.was_error_found():
             return self.get_error_msg_return()
 
+        if EASY_STATISTICS:
+            ds_values = self.get_easy_dataset_subject_counts()
+        else:
+            ds_values = self.get_dataverse_dataset_subject_counts(**extra_filters)
+
+        # -----------------------------
+        # Iterate through the vocab values,
+        # process the totals, calculate percentage
+        # -----------------------------
+        running_total = 0
+        formatted_records = []  # move from a queryset to a []
+        total_count = sum([rec['cnt'] for rec in ds_values]) + 0.00
+
+        for info in ds_values:
+            rec = OrderedDict()
+            rec['subject'] = info['subject']
+
+            # count
+            rec['count'] = info['cnt']
+            rec['total_count'] = int(total_count)
+
+            # percent
+            float_percent = info['cnt'] / total_count
+            rec['percent_string'] = '{0:.1%}'.format(float_percent)
+            rec['percent_number'] = float("%.3f" %(float_percent))
+
+            # total count
+
+            formatted_records.append(rec)
+
+        data_dict = OrderedDict()
+        data_dict['record_count'] = len(formatted_records)
+        data_dict['records'] = formatted_records
+
+        return StatsResult.build_success_result(data_dict)
+
+
+    def get_easy_dataset_subject_counts(self):
+
+        pipe = [{'$project': {'_id': 0, 'audience': 1}},
+                {'$unwind': '$audience'},
+                {'$group': {'_id': '$audience', 'cnt': {'$sum': 1}}},
+                {'$project': {'_id': 0, 'subject': '$_id', 'cnt': 1}},
+                {'$sort': {'cnt': -1}}]
+
+        return list(self.easy_dataset.aggregate(pipeline=pipe))
+
+
+    def get_dataverse_dataset_subject_counts(self,  **extra_filters):
+
         # -----------------------------------
-        # (1) Build query filters
+        # Build query filters
         # -----------------------------------
 
         # Retrieve the date parameters
@@ -403,50 +512,16 @@ class StatsMakerDatasets(StatsMakerBase):
                         datasetfieldtype__id=ds_field_type.id)
         ds_field_ids = DatasetField.objects.select_related('datasetfieldtype').filter(**search_attrs2).values_list('id', flat=True)
 
-        # -----------------------------
-        # Finally, get the ControlledVocabularyValues
-        # -----------------------------
-        ds_values = DatasetFieldControlledVocabularyValue.objects.select_related('controlledvocabularyvalues'\
+        # ----------------------------------------------
+        # Finally, return the ControlledVocabularyValues
+        # ----------------------------------------------
+        return DatasetFieldControlledVocabularyValue.objects.select_related('controlledvocabularyvalues'\
             ).filter(datasetfield__in=ds_field_ids\
             ).annotate(subject=F('controlledvocabularyvalues__strvalue')
             ).values('subject'\
             ).annotate(cnt=models.Count('controlledvocabularyvalues__id')\
             ).values('subject', 'cnt'\
             ).order_by('-cnt')
-
-
-        # -----------------------------
-        # Iterate through the vocab values,
-        # process the totals, calculate percentage
-        # -----------------------------
-        running_total = 0
-        formatted_records = []  # move from a queryset to a []
-        total_count = sum([rec['cnt'] for rec in ds_values]) + 0.00
-
-        for info in ds_values:
-            rec = OrderedDict()
-            rec['subject'] = info['subject']
-
-            # count
-            rec['count'] = info['cnt']
-            rec['total_count'] = int(total_count)
-
-            # percent
-            float_percent = info['cnt'] / total_count
-            rec['percent_string'] = '{0:.1%}'.format(float_percent)
-            rec['percent_number'] = float("%.3f" %(float_percent))
-
-            # total count
-
-            formatted_records.append(rec)
-
-        data_dict = OrderedDict()
-        data_dict['record_count'] = len(formatted_records)
-        data_dict['records'] = formatted_records
-
-        return StatsResult.build_success_result(data_dict)
-
-
 
 
     def make_month_lookup(self, stats_queryset):

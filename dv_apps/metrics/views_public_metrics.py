@@ -10,6 +10,7 @@ from django.shortcuts import render
 from django.http import JsonResponse, HttpResponseRedirect #, Http404
 from django.views.decorators.cache import cache_page
 from django.views.decorators.clickjacking import xframe_options_exempt
+from django.conf import settings
 
 from dv_apps.datafiles.models import Datafile, FileMetadata
 from dv_apps.metrics.stats_util_datasets import StatsMakerDatasets
@@ -72,6 +73,7 @@ def view_public_visualizations(request, **kwargs):
 
     # Start an OrderedDict
     resp_dict = OrderedDict()
+    resp_dict['easy_statistics'] = settings.EASY_STATISTICS
 
     # -------------------------
     # Dataverses created each month
@@ -102,7 +104,7 @@ def view_public_visualizations(request, **kwargs):
 
 
     stats_ds_count_by_subject = stats_datasets.get_dataset_subject_counts_published()
-    if not stats_monthly_ds_counts.has_error():
+    if not stats_ds_count_by_subject.has_error():
         resp_dict['dataset_counts_by_subject'] = stats_ds_count_by_subject.result_data['records']
         #resp_dict['dataset_counts_by_month_sql'] = stats_monthly_ds_counts.sql_query
 

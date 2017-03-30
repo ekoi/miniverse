@@ -1,4 +1,4 @@
-from django.conf.urls import include, url, patterns
+from django.conf.urls import include, url
 from django.contrib import admin
 from django.conf import settings
 from django.views.generic.base import RedirectView
@@ -26,6 +26,8 @@ urlpatterns = [
     url(r'^%smetrics/' % URL_PREFIX, include('dv_apps.metrics.urls')),
 
     url(r'^%sdvobjects/' % URL_PREFIX, include('dv_apps.dvobject_api.urls')),
+
+    url(r'^%sqc/' % URL_PREFIX, include('dv_apps.quality_checks.urls')),
 
     url(r'^%sslackbot/' % URL_PREFIX, include('dv_apps.slackbot.urls')),
 
