@@ -6,7 +6,7 @@ from dv_apps.metrics import views_test,\
 # Dataset metrics
 from dv_apps.metrics.stats_views_datasets import DatasetCountByMonthView,\
     DatasetTotalCounts,\
-    DatasetSubjectCounts
+    DatasetCategoryCounts
 
 from dv_apps.metrics.stats_views_dataset_bins import FilesPerDatasetStats,\
     BytesPerDatasetStats
@@ -111,7 +111,7 @@ urlpatterns += [
 
     url(r'^v1/datasets/count/monthly$', DatasetCountByMonthView.as_view(), name='view_dataset_counts_by_month'),
 
-    url(r'^v1/datasets/count/by-subject$', DatasetSubjectCounts.as_view(), name='view_dataset_counts_by_subject'),
+    url(r'^v1/datasets/count/by-category$', DatasetCategoryCounts.as_view(), name='view_dataset_counts_by_category'),
 
     url(r'^v1/datasets/file-stats$', FilesPerDatasetStats.as_view(), name='view_files_per_dataset_stats'),
 

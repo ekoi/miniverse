@@ -40,6 +40,15 @@ class StatsMakerDatasets(StatsMakerBase):
         end_date = string in YYYY-MM-DD format
         """
         super(StatsMakerDatasets, self).__init__(**kwargs)
+        self.category = kwargs.get('category')
+        if not self.category:
+            self.category = "audience" if EASY_STATISTICS else "subject"
+
+    def get_category(self):
+        """
+        Return the category that is used to display the variety of contents in datasets
+        """
+        return self.category
 
     # ----------------------------
     #   Dataset counts (single number totals)
@@ -295,17 +304,150 @@ class StatsMakerDatasets(StatsMakerBase):
         return StatsResult.build_success_result(data_dict, sql_query)
 
 
-    def get_dataset_subject_counts_published(self):
-        """Published Dataset counts by subject"""
+    def get_dataset_category_counts_published(self):
+        """Published Dataset counts by category"""
 
-        return self.get_dataset_subject_counts(**self.get_is_published_filter_param())
+        return self.get_dataset_category_counts(**self.get_is_published_filter_param())
 
 
-    def get_dataset_subject_counts_unpublished(self):
-        """Unpublished Dataset counts by subject"""
+    def get_dataset_category_counts_unpublished(self):
+        """Unpublished Dataset counts by category"""
 
-        return self.get_dataset_subject_counts(\
+        return self.get_dataset_category_counts(\
                     **self.get_is_NOT_published_filter_param())
+
+
+    def get_dataset_category_counts(self, **extra_filters):
+        """Dataset counts by subjet"""
+
+        # Was an error found earlier?
+        #
+        if self.was_error_found():
+            return self.get_error_msg_return()
+
+        if EASY_STATISTICS:
+            ds_values = self.get_easy_dataset_category_counts()
+        else:
+            ds_values = self.get_dataverse_dataset_subject_counts(**extra_filters)
+
+        # -----------------------------
+        # Iterate through the vocab values,
+        # process the totals, calculate percentage
+        # -----------------------------
+        running_total = 0
+        formatted_records = []  # move from a queryset to a []
+        total_count = sum([rec['cnt'] for rec in ds_values]) + 0.00
+
+        for info in ds_values:
+            rec = OrderedDict()
+            rec['category'] = info['category']
+
+            # count
+            rec['count'] = info['cnt']
+            rec['total_count'] = int(total_count)
+
+            # percent
+            float_percent = info['cnt'] / total_count
+            rec['percent_string'] = '{0:.1%}'.format(float_percent)
+            rec['percent_number'] = float("%.3f" %(float_percent))
+
+            # total count
+
+            formatted_records.append(rec)
+
+        data_dict = OrderedDict()
+        data_dict['record_count'] = len(formatted_records)
+        data_dict['records'] = formatted_records
+
+        return StatsResult.build_success_result(data_dict)
+
+
+    def get_easy_dataset_category_counts(self):
+
+        category = self.category
+        pipe = [{'$project': {'_id': 0, category: 1}},
+                {'$unwind': '$'+category},
+                {'$group': {'_id': '$'+category, 'cnt': {'$sum': 1}}},
+                {'$project': {'_id': 0, 'category': '$_id', 'cnt': 1}},
+                {'$sort': {'cnt': -1}}]
+
+        return list(self.easy_dataset.aggregate(pipeline=pipe))
+
+
+    def get_dataverse_dataset_subject_counts(self,  **extra_filters):
+
+        # -----------------------------------
+        # Build query filters
+        # -----------------------------------
+
+        # Retrieve the date parameters
+        # -----------------------------------
+        filter_params = self.get_date_filter_params()
+
+        # -----------------------------------
+        # Add extra filters from kwargs
+        # -----------------------------------
+        if extra_filters:
+            for k, v in extra_filters.items():
+                filter_params[k] = v
+
+        # -----------------------------
+        # Get the DatasetFieldType for subject
+        # -----------------------------
+        search_attrs = dict(name='subject',\
+                            required=True,\
+                            metadatablock__name='citation')
+        try:
+            ds_field_type = DatasetFieldType.objects.get(**search_attrs)
+        except DatasetFieldType.DoesNotExist:
+            return False, 'DatasetFieldType for Citation title not found.  (kwargs: %s)' % search_attrs
+
+        # -----------------------------
+        # Retrieve Dataset ids by time and published/unpublished
+        # -----------------------------
+        dataset_ids = Dataset.objects.select_related('dvobject'\
+                        ).filter(**filter_params\
+                        ).values_list('dvobject__id', flat=True)
+
+
+
+        # -----------------------------
+        # Get latest DatasetVersion ids
+        # -----------------------------
+        id_info_list = DatasetVersion.objects.filter(\
+            dataset__in=dataset_ids\
+            ).values('id', 'dataset_id', 'versionnumber', 'minorversionnumber'\
+            ).order_by('dataset_id', '-id', '-versionnumber', '-minorversionnumber')
+
+        # -----------------------------
+        # Iterate through and get the DatasetVersion id
+        #        of the latest version
+        # -----------------------------
+        dsv_ids = []
+        last_dataset_id = None
+        for idx, info in enumerate(id_info_list):
+            if idx == 0 or info['dataset_id'] != last_dataset_id:
+                dsv_ids.append(info['id'])
+
+            last_dataset_id = info['dataset_id']
+
+        # -----------------------------
+        # Get the DatasetField ids
+        # -----------------------------
+        search_attrs2 = dict(datasetversion__id__in=dsv_ids,\
+                        datasetfieldtype__id=ds_field_type.id)
+        ds_field_ids = DatasetField.objects.select_related('datasetfieldtype').filter(**search_attrs2).values_list('id', flat=True)
+
+        # ----------------------------------------------
+        # Finally, return the ControlledVocabularyValues
+        # ----------------------------------------------
+        return DatasetFieldControlledVocabularyValue.objects.select_related('controlledvocabularyvalues'\
+            ).filter(datasetfield__in=ds_field_ids\
+            ).annotate(category=F('controlledvocabularyvalues__strvalue')
+            ).values('category'\
+            ).annotate(cnt=models.Count('controlledvocabularyvalues__id')\
+            ).values('category', 'cnt'\
+            ).order_by('-cnt')
 
 
 
@@ -390,138 +532,6 @@ class StatsMakerDatasets(StatsMakerBase):
         data_dict['records'] = records
 
         return StatsResult.build_success_result(data_dict, sql_query)
-
-
-    def get_dataset_subject_counts(self,  **extra_filters):
-        """Dataset counts by subjet"""
-
-        # Was an error found earlier?
-        #
-        if self.was_error_found():
-            return self.get_error_msg_return()
-
-        if EASY_STATISTICS:
-            ds_values = self.get_easy_dataset_subject_counts()
-        else:
-            ds_values = self.get_dataverse_dataset_subject_counts(**extra_filters)
-
-        # -----------------------------
-        # Iterate through the vocab values,
-        # process the totals, calculate percentage
-        # -----------------------------
-        running_total = 0
-        formatted_records = []  # move from a queryset to a []
-        total_count = sum([rec['cnt'] for rec in ds_values]) + 0.00
-
-        for info in ds_values:
-            rec = OrderedDict()
-            rec['subject'] = info['subject']
-
-            # count
-            rec['count'] = info['cnt']
-            rec['total_count'] = int(total_count)
-
-            # percent
-            float_percent = info['cnt'] / total_count
-            rec['percent_string'] = '{0:.1%}'.format(float_percent)
-            rec['percent_number'] = float("%.3f" %(float_percent))
-
-            # total count
-
-            formatted_records.append(rec)
-
-        data_dict = OrderedDict()
-        data_dict['record_count'] = len(formatted_records)
-        data_dict['records'] = formatted_records
-
-        return StatsResult.build_success_result(data_dict)
-
-
-    def get_easy_dataset_subject_counts(self):
-
-        pipe = [{'$project': {'_id': 0, 'audience': 1}},
-                {'$unwind': '$audience'},
-                {'$group': {'_id': '$audience', 'cnt': {'$sum': 1}}},
-                {'$project': {'_id': 0, 'subject': '$_id', 'cnt': 1}},
-                {'$sort': {'cnt': -1}}]
-
-        return list(self.easy_dataset.aggregate(pipeline=pipe))
-
-
-    def get_dataverse_dataset_subject_counts(self,  **extra_filters):
-
-        # -----------------------------------
-        # Build query filters
-        # -----------------------------------
-
-        # Retrieve the date parameters
-        # -----------------------------------
-        filter_params = self.get_date_filter_params()
-
-        # -----------------------------------
-        # Add extra filters from kwargs
-        # -----------------------------------
-        if extra_filters:
-            for k, v in extra_filters.items():
-                filter_params[k] = v
-
-        # -----------------------------
-        # Get the DatasetFieldType for subject
-        # -----------------------------
-        search_attrs = dict(name='subject',\
-                            required=True,\
-                            metadatablock__name='citation')
-        try:
-            ds_field_type = DatasetFieldType.objects.get(**search_attrs)
-        except DatasetFieldType.DoesNotExist:
-            return False, 'DatasetFieldType for Citation title not found.  (kwargs: %s)' % search_attrs
-
-        # -----------------------------
-        # Retrieve Dataset ids by time and published/unpublished
-        # -----------------------------
-        dataset_ids = Dataset.objects.select_related('dvobject'\
-                        ).filter(**filter_params\
-                        ).values_list('dvobject__id', flat=True)
-
-
-
-        # -----------------------------
-        # Get latest DatasetVersion ids
-        # -----------------------------
-        id_info_list = DatasetVersion.objects.filter(\
-            dataset__in=dataset_ids\
-            ).values('id', 'dataset_id', 'versionnumber', 'minorversionnumber'\
-            ).order_by('dataset_id', '-id', '-versionnumber', '-minorversionnumber')
-
-        # -----------------------------
-        # Iterate through and get the DatasetVersion id
-        #        of the latest version
-        # -----------------------------
-        dsv_ids = []
-        last_dataset_id = None
-        for idx, info in enumerate(id_info_list):
-            if idx == 0 or info['dataset_id'] != last_dataset_id:
-                dsv_ids.append(info['id'])
-
-            last_dataset_id = info['dataset_id']
-
-        # -----------------------------
-        # Get the DatasetField ids
-        # -----------------------------
-        search_attrs2 = dict(datasetversion__id__in=dsv_ids,\
-                        datasetfieldtype__id=ds_field_type.id)
-        ds_field_ids = DatasetField.objects.select_related('datasetfieldtype').filter(**search_attrs2).values_list('id', flat=True)
-
-        # ----------------------------------------------
-        # Finally, return the ControlledVocabularyValues
-        # ----------------------------------------------
-        return DatasetFieldControlledVocabularyValue.objects.select_related('controlledvocabularyvalues'\
-            ).filter(datasetfield__in=ds_field_ids\
-            ).annotate(subject=F('controlledvocabularyvalues__strvalue')
-            ).values('subject'\
-            ).annotate(cnt=models.Count('controlledvocabularyvalues__id')\
-            ).values('subject', 'cnt'\
-            ).order_by('-cnt')
 
 
     def make_month_lookup(self, stats_queryset):

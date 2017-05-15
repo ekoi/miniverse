@@ -6,7 +6,7 @@ from django.conf import settings
 
 from dv_apps.metrics.stats_views_datasets import DatasetCountByMonthView,\
     DatasetTotalCounts,\
-    DatasetSubjectCounts
+    DatasetCategoryCounts
 from dv_apps.metrics.stats_views_dataset_bins import FilesPerDatasetStats,\
     BytesPerDatasetStats
 
@@ -41,7 +41,7 @@ VIEW_CLASSES_FOR_SPEC = [\
             # dataset stats
             DatasetTotalCounts,\
             DatasetCountByMonthView,\
-            DatasetSubjectCounts,\
+            DatasetCategoryCounts,\
                 # bins
                 FilesPerDatasetStats,\
                 BytesPerDatasetStats,\

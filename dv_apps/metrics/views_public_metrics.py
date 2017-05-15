@@ -10,12 +10,12 @@ from django.shortcuts import render
 from django.http import JsonResponse, HttpResponseRedirect #, Http404
 from django.views.decorators.cache import cache_page
 from django.views.decorators.clickjacking import xframe_options_exempt
-from django.conf import settings
 
 from dv_apps.datafiles.models import Datafile, FileMetadata
 from dv_apps.metrics.stats_util_datasets import StatsMakerDatasets
 from dv_apps.metrics.stats_util_dataverses import StatsMakerDataverses
 from dv_apps.metrics.stats_util_files import StatsMakerFiles
+from dv_apps.metrics.stats_util_base import EASY_STATISTICS
 
 from dv_apps.utils.metrics_cache_time import get_metrics_cache_time
 from dv_apps.utils.date_helper import get_one_year_ago
@@ -60,9 +60,10 @@ def view_public_visualizations(request, **kwargs):
     """
     Return HTML/D3Plus visualizations for a variety of public statistics
     """
-
     if kwargs and len(kwargs) > 0:
         # kwargs override GET parameters
+        if EASY_STATISTICS:
+            kwargs["category"] = request.GET.get("category")
         stats_datasets = StatsMakerDatasets(**kwargs)
         stats_dvs = StatsMakerDataverses(**kwargs)
         stats_files = StatsMakerFiles(**kwargs)
@@ -73,7 +74,6 @@ def view_public_visualizations(request, **kwargs):
 
     # Start an OrderedDict
     resp_dict = OrderedDict()
-    resp_dict['easy_statistics'] = settings.EASY_STATISTICS
 
     # -------------------------
     # Dataverses created each month
@@ -103,9 +103,10 @@ def view_public_visualizations(request, **kwargs):
         resp_dict['dataset_counts_by_month_sql'] = stats_monthly_ds_counts.sql_query
 
 
-    stats_ds_count_by_subject = stats_datasets.get_dataset_subject_counts_published()
-    if not stats_ds_count_by_subject.has_error():
-        resp_dict['dataset_counts_by_subject'] = stats_ds_count_by_subject.result_data['records']
+    stats_ds_count_by_category = stats_datasets.get_dataset_category_counts_published()
+    if not stats_ds_count_by_category.has_error():
+        resp_dict['category'] = stats_datasets.get_category().capitalize()
+        resp_dict['dataset_counts_by_category'] = stats_ds_count_by_category.result_data['records']
         #resp_dict['dataset_counts_by_month_sql'] = stats_monthly_ds_counts.sql_query
 
     # -------------------------
@@ -139,7 +140,6 @@ def view_public_visualizations(request, **kwargs):
     #success, datafile_content_type_counts =\ #stats_files.get_datafile_content_type_counts_published()
     #if success:
     #    resp_dict['datafile_content_type_counts'] = datafile_content_type_counts[:15]
-
 
 
     return render(request, 'metrics/metrics_public.html', resp_dict)
