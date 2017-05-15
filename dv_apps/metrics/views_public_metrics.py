@@ -142,7 +142,10 @@ def view_public_visualizations(request, **kwargs):
     #    resp_dict['datafile_content_type_counts'] = datafile_content_type_counts[:15]
 
 
-    return render(request, 'metrics/metrics_public.html', resp_dict)
+    if EASY_STATISTICS:
+        return render(request, 'metrics/metrics_easy.html', resp_dict)
+    else:
+        return render(request, 'metrics/metrics_public.html', resp_dict)
 
 
 
