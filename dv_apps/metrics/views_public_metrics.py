@@ -50,9 +50,17 @@ def view_public_visualizations_last12(request):
 
     # start from the 1st day of last year's month
     #
-    date_filters = dict(start_date=one_year_ago.strftime('%Y-%m-01'))
+    filters = dict(start_date=one_year_ago.strftime('%Y-%m-01'))
+    if EASY_STATISTICS:
+        filters["category"] = request.GET.get("category")
+        if request.GET.get("start_date"):
+            filters["start_date"] = request.GET.get("start_date")
+        if request.GET.get("end_date"):
+            filters["end_date"] = request.GET.get("end_date")
+        if request.GET.get("relative"):
+            filters["relative"] = request.GET.get("relative")
 
-    return view_public_visualizations(request, **date_filters)
+    return view_public_visualizations(request, **filters)
 
 
 @cache_page(get_metrics_cache_time())
@@ -62,8 +70,6 @@ def view_public_visualizations(request, **kwargs):
     """
     if kwargs and len(kwargs) > 0:
         # kwargs override GET parameters
-        if EASY_STATISTICS:
-            kwargs["category"] = request.GET.get("category")
         stats_datasets = StatsMakerDatasets(**kwargs)
         stats_dvs = StatsMakerDataverses(**kwargs)
         stats_files = StatsMakerFiles(**kwargs)
@@ -137,9 +143,18 @@ def view_public_visualizations(request, **kwargs):
         resp_dict['file_content_types_top_20'] = list(stats_file_content_types.result_data)[:20]
         #resp_dict['file_content_types_json'] = json.dumps(file_content_types, indent=4)
     """
-    #success, datafile_content_type_counts =\ #stats_files.get_datafile_content_type_counts_published()
-    #if success:
-    #    resp_dict['datafile_content_type_counts'] = datafile_content_type_counts[:15]
+
+    # -----------------------------------
+    # Dataset deposits  each month - EASY
+    # -----------------------------------
+    # inclusive bulk deposits
+    stats_monthly_deposit_counts = stats_datasets.get_easy_deposit_count_by_month()
+    if not stats_monthly_deposit_counts.has_error():
+        resp_dict['deposit_counts_by_month'] = list(stats_monthly_deposit_counts.result_data['records'])
+    # exclusive bulk deposits
+    stats_monthly_deposit_counts = stats_datasets.get_easy_deposit_count_by_month(True)
+    if not stats_monthly_deposit_counts.has_error():
+        resp_dict['deposit_counts_by_month_no_bulk'] = list(stats_monthly_deposit_counts.result_data['records'])
 
 
     if EASY_STATISTICS:

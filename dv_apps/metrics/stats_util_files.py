@@ -224,15 +224,19 @@ print stats_files.get_total_file_downloads().result_data
         # Retrieve the date parameters
         filter_params = self.get_easy_date_filter_params()
         start_date = filter_params["start_date"]
+        end_date = filter_params["end_date"]
 
-        pipe = [{'$match': {'$and': [{'date': {'$gte': start_date}}, {'$or': [{'type': 'DOWNLOAD_DATASET_REQUEST'}, {'type': 'DOWNLOAD_FILE_REQUEST'}]}]}},
+        pipe = [{'$match': {'$and': [{'date': {'$gte': start_date}}, {'date': {'$lte': end_date}}, {'$or': [{'type': 'DOWNLOAD_DATASET_REQUEST'}, {'type': 'DOWNLOAD_FILE_REQUEST'}]}]}},
                 {'$group': {'_id': {'$substr': ['$date', 0, 7]},'count': {'$sum': 1}}},
                 {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
                 {'$sort': {'yyyy_mm': 1}}]
         file_counts_by_month = list(self.easy_logs.aggregate(pipeline=pipe))
 
-        pipe = [{'$match': {'$and': [{'date': {'$gte': start_date}}, {'$or': [{'type': 'DOWNLOAD_DATASET_REQUEST'}, {'type': 'DOWNLOAD_FILE_REQUEST'}]}]}}]
-        running_total = len(list(self.easy_logs.aggregate(pipeline=pipe)))
+        if self.total_count_relative:
+            running_total = 0
+        else:
+            pipe = [{'$match': {'$and': [{'date': {'$gte': start_date}}, {'$or': [{'type': 'DOWNLOAD_DATASET_REQUEST'}, {'type': 'DOWNLOAD_FILE_REQUEST'}]}]}}]
+            running_total = len(list(self.easy_logs.aggregate(pipeline=pipe)))
 
         formatted_records = []  # move from a queryset to a []
 
@@ -403,15 +407,19 @@ print stats_files.get_total_file_downloads().result_data
         # Retrieve the date parameters
         filter_params = self.get_easy_date_filter_params()
         start_date = filter_params["start_date"]
+        end_date = filter_params["end_date"]
 
-        pipe = [{'$match': {'dateSubmitted': {'$gte': start_date}}},
+        pipe = [{'$match': {'$and': [{'dateSubmitted': {'$gte': start_date}}, {'dateSubmitted': {'$lte': end_date}}]}},
                 {'$group': {'_id': {'$substr': ['$dateSubmitted', 0, 7]},'count': {'$sum': 1}}},
                 {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
                 {'$sort': {'yyyy_mm': 1}}]
         file_counts_by_month = list(self.easy_file.aggregate(pipeline=pipe))
 
-        pipe = [{'$match': {'dateSubmitted': {'$lt': start_date}}}]
-        running_total = len(list(self.easy_file.aggregate(pipeline=pipe)))
+        if self.total_count_relative:
+            running_total = 0
+        else:
+            pipe = [{'$match': {'dateSubmitted': {'$lt': start_date}}}]
+            running_total = len(list(self.easy_file.aggregate(pipeline=pipe)))
 
         formatted_records = []  # move from a queryset to a []
 

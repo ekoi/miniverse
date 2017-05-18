@@ -165,61 +165,6 @@ class StatsMakerDatasets(StatsMakerBase):
             return self.get_dataverse_dataset_count_by_month(date_param, **extra_filters)
 
 
-    def get_easy_dataset_count_by_month(self):
-
-        # Retrieve the date parameters
-        filter_params = self.get_easy_date_filter_params()
-        start_date = filter_params["start_date"]
-        pipe = [{'$match': {'EMD:dateSubmitted': {'$gte': start_date}}},
-                {'$group': {'_id': {'$substr': ['$EMD:dateSubmitted', 0, 7]},'count': {'$sum': 1}}},
-                {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
-                {'$sort': {'yyyy_mm': 1}}]
-        ds_counts_by_month = list(self.easy_dataset.aggregate(pipeline=pipe))
-
-        pipe = [{'$match': {'EMD:dateSubmitted': {'$lt': start_date}}}]
-        running_total = len(list(self.easy_dataset.aggregate(pipeline=pipe)))
-
-        formatted_records = []  # move from a queryset to a []
-
-        for d in ds_counts_by_month:
-            year_month = d['yyyy_mm'][:7]
-            year = int(d['yyyy_mm'][:4])
-            try:
-                month = int(d['yyyy_mm'][5:7])
-            except:
-                return StatsResult.build_error_result("in converting %s (month) into an integer (in get_easy_dataset_count_by_month)" % d['yyyy_mm'][5:7])
-
-            fmt_dict = OrderedDict()
-            fmt_dict['yyyy_mm'] = year_month
-            fmt_dict['count'] = d['count']
-
-            # running total
-            running_total += d['count']
-            fmt_dict['running_total'] = running_total
-
-            # Add year and month numbers
-            fmt_dict['year_num'] = year
-            fmt_dict['month_num'] = month
-
-            # Add month name
-            month_name_found, month_name_short = get_month_name_abbreviation(month)
-
-            if month_name_found:
-                assume_month_name_found, fmt_dict['month_name'] = get_month_name(month)
-                fmt_dict['month_name_short'] = month_name_short
-            else:
-                logging.warning("no month name found for month %d (get_easy_dataset_count_by_month)" % month)
-
-            # Add formatted record
-            formatted_records.append(fmt_dict)
-
-        data_dict = OrderedDict()
-        data_dict['record_count'] = len(formatted_records)
-        data_dict['records'] = formatted_records
-
-        return StatsResult.build_success_result(data_dict, None)
-
-
     def get_dataverse_dataset_count_by_month(self, date_param, **extra_filters):
 
          # -----------------------------------
@@ -302,6 +247,98 @@ class StatsMakerDatasets(StatsMakerBase):
         data_dict['records'] = formatted_records
 
         return StatsResult.build_success_result(data_dict, sql_query)
+
+
+    def get_easy_dataset_count_by_month(self):
+
+        # Retrieve the date parameters
+        filter_params = self.get_easy_date_filter_params()
+        start_date = filter_params["start_date"]
+        end_date = filter_params["end_date"]
+        pipe = [{'$match': {'$and': [{'EMD:dateSubmitted': {'$gte': start_date}}, {'EMD:dateSubmitted': {'$lte': end_date}}]}},
+                {'$group': {'_id': {'$substr': ['$EMD:dateSubmitted', 0, 7]},'count': {'$sum': 1}}},
+                {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
+                {'$sort': {'yyyy_mm': 1}}]
+        ds_counts_by_month = list(self.easy_dataset.aggregate(pipeline=pipe))
+
+        if self.total_count_relative:
+            running_total = 0
+        else:
+            pipe = [{'$match': {'EMD:dateSubmitted': {'$lt': start_date}}}]
+            running_total = len(list(self.easy_dataset.aggregate(pipeline=pipe)))
+
+        return self.get_easy_counts_by_month(ds_counts_by_month, running_total)
+
+
+    def get_easy_deposit_count_by_month(self, exclude_bulk=False):
+
+        filter_params = self.get_easy_date_filter_params()
+        start_date = filter_params["start_date"]
+        end_date = filter_params["end_date"]
+
+        if exclude_bulk:
+            pipe = [{'$match': {'$and': [{'type':'DATASET_DEPOSIT'}, {'roles': 'USER'},
+                                         {'date': {'$gte': start_date}},{'date': {'$lte': end_date}}]}},
+                    {'$group': {'_id': {'$substr': ['$date', 0, 7]}, 'count': {'$sum': 1}}},
+                    {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
+                    {'$sort': {'yyyy_mm': 1}}]
+        else:
+            pipe = [{'$match': {'$and': [{'type': 'DATASET_DEPOSIT'}, {'date': {'$gte': start_date}}, {'date': {'$lte': end_date}}]}},
+                    {'$group': {'_id': {'$substr': ['$date', 0, 7]}, 'count': {'$sum': 1}}},
+                    {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
+                    {'$sort': {'yyyy_mm': 1}}]
+        ds_counts_by_month = list(self.easy_logs.aggregate(pipeline=pipe))
+
+        if self.total_count_relative:
+            running_total = 0
+        else:
+            pipe = [{'$match': {'$and': [{'type': {'$eq': 'DATASET_DEPOSIT'}}, {'date': {'$lt': start_date}}]}}]
+            running_total = len(list(self.easy_logs.aggregate(pipeline=pipe)))
+
+        return self.get_easy_counts_by_month(ds_counts_by_month, running_total)
+
+
+    def get_easy_counts_by_month(self, ds_counts_by_month, running_total):
+
+        formatted_records = []
+
+        for d in ds_counts_by_month:
+            year_month = d['yyyy_mm'][:7]
+            year = int(d['yyyy_mm'][:4])
+            try:
+                month = int(d['yyyy_mm'][5:7])
+            except:
+                return StatsResult.build_error_result("in converting %s (month) into an integer (in get_easy_dataset_count_by_month)" % d['yyyy_mm'][5:7])
+
+            fmt_dict = OrderedDict()
+            fmt_dict['yyyy_mm'] = year_month
+            fmt_dict['count'] = d['count']
+
+            # running total
+            running_total += d['count']
+            fmt_dict['running_total'] = running_total
+
+            # Add year and month numbers
+            fmt_dict['year_num'] = year
+            fmt_dict['month_num'] = month
+
+            # Add month name
+            month_name_found, month_name_short = get_month_name_abbreviation(month)
+
+            if month_name_found:
+                assume_month_name_found, fmt_dict['month_name'] = get_month_name(month)
+                fmt_dict['month_name_short'] = month_name_short
+            else:
+                logging.warning("no month name found for month %d (get_easy_dataset_count_by_month)" % month)
+
+            # Add formatted record
+            formatted_records.append(fmt_dict)
+
+        data_dict = OrderedDict()
+        data_dict['record_count'] = len(formatted_records)
+        data_dict['records'] = formatted_records
+
+        return StatsResult.build_success_result(data_dict, None)
 
 
     def get_dataset_category_counts_published(self):
