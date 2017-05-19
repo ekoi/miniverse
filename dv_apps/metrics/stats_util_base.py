@@ -355,12 +355,12 @@ class StatsMakerBase(object):
         if self.start_date:
             filter_params['start_date'] = self.start_date
         else:
-            filter_params['start_date'] = '2008-01-01'
+            convert_worked, filter_params['start_date'] = format_yyyy_mm_dd('2008-01-01')
 
         if self.end_date:
             filter_params['end_date'] = self.end_date
         else:
-            filter_params['start_date'] = '2999-12-31'
+            convert_worked, filter_params['end_date'] = format_yyyy_mm_dd('2999-12-31')
 
         if self.selected_year:
             filter_params['selected_year'] = self.selected_year

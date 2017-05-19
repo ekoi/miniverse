@@ -1,9 +1,11 @@
 {% load humanize %}
 
-<div id="viz-datasets_by_category" class="viz"></div>
+<div id="viz-categories" class="viz"></div>
 <script>
 
   var category = "{{category}}"
+  var title = (category == "Mimetype") ? "Files by {{category}}"  : "Datasets by {{category}}";
+
   var dataset_counts_by_category = [
     {% for i in dataset_counts_by_category %}
         {"value":{{ i.count }},  "weight": {{ i.percent_number }}, "type": "{{ i.category }}", "label":"{{ i.category}} ({{ i.percent_string }})"}
@@ -13,7 +15,7 @@
 
       // instantiate d3plus
       var visualization = d3plus.viz()
-        .container("#viz-datasets_by_category")     // container DIV to hold the visualization
+        .container("#viz-categories")     // container DIV to hold the visualization
         .data(dataset_counts_by_category)     // data to use with the visualization
         .type("tree_map")       // visualization type
         .id("type")            // nesting keys
@@ -21,7 +23,7 @@
         .size("value")      // sizing of blocks
         .color("weight")
         .legend(false)
-        .title("Datasets by " + category)         // key name to size bubbles
+        .title(title)         // key name to size bubbles
         .draw()                // finally, draw the visualization
 
 </script>

@@ -255,8 +255,8 @@ class StatsMakerDatasets(StatsMakerBase):
         filter_params = self.get_easy_date_filter_params()
         start_date = filter_params["start_date"]
         end_date = filter_params["end_date"]
-        pipe = [{'$match': {'$and': [{'EMD:dateSubmitted': {'$gte': start_date}}, {'EMD:dateSubmitted': {'$lte': end_date}}]}},
-                {'$group': {'_id': {'$substr': ['$EMD:dateSubmitted', 0, 7]},'count': {'$sum': 1}}},
+        pipe = [{'$match': {'$and': [{'dateSubmitted': {'$gte': start_date}}, {'dateSubmitted': {'$lte': end_date}}]}},
+                {'$group': {'_id': {'$substr': ['$dateSubmitted', 0, 7]},'count': {'$sum': 1}}},
                 {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
                 {'$sort': {'yyyy_mm': 1}}]
         ds_counts_by_month = list(self.easy_dataset.aggregate(pipeline=pipe))
@@ -264,7 +264,7 @@ class StatsMakerDatasets(StatsMakerBase):
         if self.total_count_relative:
             running_total = 0
         else:
-            pipe = [{'$match': {'EMD:dateSubmitted': {'$lt': start_date}}}]
+            pipe = [{'$match': {'dateSubmitted': {'$lt': start_date}}}]
             running_total = len(list(self.easy_dataset.aggregate(pipeline=pipe)))
 
         return self.get_easy_counts_by_month(ds_counts_by_month, running_total)
@@ -292,7 +292,7 @@ class StatsMakerDatasets(StatsMakerBase):
         if self.total_count_relative:
             running_total = 0
         else:
-            pipe = [{'$match': {'$and': [{'type': {'$eq': 'DATASET_DEPOSIT'}}, {'date': {'$lt': start_date}}]}}]
+            pipe = [{'$match': {'$and': [{'type': 'DATASET_DEPOSIT'}, {'date': {'$lt': start_date}}]}}]
             running_total = len(list(self.easy_logs.aggregate(pipeline=pipe)))
 
         return self.get_easy_counts_by_month(ds_counts_by_month, running_total)
@@ -402,13 +402,32 @@ class StatsMakerDatasets(StatsMakerBase):
     def get_easy_dataset_category_counts(self):
 
         category = self.category
-        pipe = [{'$project': {'_id': 0, category: 1}},
-                {'$unwind': '$'+category},
-                {'$group': {'_id': '$'+category, 'cnt': {'$sum': 1}}},
-                {'$project': {'_id': 0, 'category': '$_id', 'cnt': 1}},
-                {'$sort': {'cnt': -1}}]
+        filter_params = self.get_easy_date_filter_params()
+        start_date = filter_params["start_date"]
+        end_date = filter_params["end_date"]
 
-        return list(self.easy_dataset.aggregate(pipeline=pipe))
+        if category in ['audience', 'coverage', 'title', 'rights', 'creator', 'format', 'type', 'subject']:
+            # category object is a list
+            pipe = [{'$match': {'$and': [{'dateSubmitted': {'$gte': start_date}}, {'dateSubmitted': {'$lte': end_date}}]}},
+                    {'$project': {'_id': 0, category: 1}},
+                    {'$unwind': '$' + category},
+                    {'$group': {'_id': '$' + category, 'cnt': {'$sum': 1}}},
+                    {'$project': {'_id': 0, 'category': '$_id', 'cnt': 1}},
+                    {'$sort': {'cnt': -1}}]
+            counts = list(self.easy_dataset.aggregate(pipeline=pipe))
+        else:
+            # category object is a string
+            pipe = [{'$match': {'$and': [{'dateSubmitted': {'$gte': start_date}}, {'dateSubmitted': {'$lte': end_date}}]}},
+                    {'$project': {'_id': 0, category: 1}},
+                    {'$group': {'_id': '$' + category, 'cnt': {'$sum': 1}}},
+                    {'$project': {'_id': 0, 'category': '$_id', 'cnt': 1}},
+                    {'$sort': {'cnt': -1}}]
+            if category == "mimeType":
+                counts = list(self.easy_file.aggregate(pipeline=pipe))
+            else:
+                counts = list(self.easy_dataset.aggregate(pipeline=pipe))
+
+        return counts
 
 
     def get_dataverse_dataset_subject_counts(self,  **extra_filters):
