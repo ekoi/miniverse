@@ -79,6 +79,9 @@ class StatsMakerBase(object):
         # load dates
         self.load_dates_from_kwargs(**kwargs)
 
+        # total count beginning point relative vs. from very beginning
+        self.total_count_relative = kwargs.get('relative', None) == 'true'
+
         if EASY_STATISTICS:
             self.easy_dataset = client.get_database('dataset').data
             self.easy_file = client.get_database('file').data
@@ -351,12 +354,16 @@ class StatsMakerBase(object):
         filter_params = {}
         if self.start_date:
             filter_params['start_date'] = self.start_date
+        else:
+            convert_worked, filter_params['start_date'] = format_yyyy_mm_dd('2008-01-01')
 
         if self.end_date:
-            filter_params['%s__lte' % date_var_name] = self.end_date
+            filter_params['end_date'] = self.end_date
+        else:
+            convert_worked, filter_params['end_date'] = format_yyyy_mm_dd('2999-12-31')
 
         if self.selected_year:
-            filter_params['%s__year' % date_var_name] = self.selected_year
+            filter_params['selected_year'] = self.selected_year
 
         return filter_params
 

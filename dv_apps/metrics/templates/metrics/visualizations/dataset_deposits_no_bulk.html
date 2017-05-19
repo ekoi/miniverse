@@ -1,0 +1,46 @@
+{% load humanize %}
+<div id="viz-deposits_by_month_no_bulk" class="viz"></div>
+<script>
+
+  var deposits_by_month_no_bulk = [
+    {%for i in deposit_counts_by_month_no_bulk%}
+
+    {"Month": "{{ i.month_name }} {{ i.year_num }}", "monthNum": {{ i.month_num }}, "name":"Total Deposits", "Number of Deposits": {{ i.running_total }}, "running_total" : {{i.running_total}}, "month_sort" : "{{ i.yyyy_mm }}",  "display_name":"{{ i.month_name }} {{ i.year_num }}: {{ i.count|intcomma }} new Deposits; Total of {{ i.running_total|intcomma }} "}
+    {%if not forloop.last%},{%endif%}
+    {%endfor%}
+  ]
+
+  var y_axis_vals = [{%for i in deposit_counts_by_month_no_bulk%}{{ i.running_total }}{%if not forloop.last%},{%endif%}{%endfor%}]
+
+
+  // instantiate d3plus
+   var deposit_no_bulk_attributes = [
+    {"name": "Total Deposits", "hex": "#088A08"},
+    {"name": "Monthly Datasets", "hex": "#ffcc00"}
+  ]
+
+
+  $( document ).ready(function() {
+
+      var visualization = d3plus.viz()
+        .container("#viz-deposits_by_month_no_bulk")  // container DIV to hold the visualization
+        .data(deposits_by_month_no_bulk)  // data to use with the visualization
+        .type("bar")       // visualization type
+        .id("name")         // key for which our data is unique on
+        .text({"html":"true", "value":"display_name"})       // key to use for display text
+        .y({"value" : "Number of Deposits",
+            "range": get_metrics_viz_range(deposits_by_month_no_bulk, 1000) })         // key to use for y-axis
+        .x({"value":"Month"})          // key to use for x-axis
+        .attrs(deposit_no_bulk_attributes)
+        .color("hex")
+        .order({
+            "sort": "asc",
+            "value": "month_sort"
+         })
+        .resize(true)
+        .title("Dataset deposits Over Time (bulk deposits excluded)")
+        //.footer("{%lorem%}")
+        .draw()             // finally, draw the visualization!
+    });
+
+</script>

@@ -75,7 +75,7 @@ class StatsViewSwagger(View):
     RESULT_NAME_DATASET = 'Dataset'
     RESULT_NAME_DATAVERSE = 'Dataverse'
     RESULT_NAME_DATAVERSE_TYPE_COUNTS = 'DataverseTypeCount'
-    RESULT_NAME_DATASET_SUBJECT_COUNTS = 'DatasetSubjectCounts'
+    RESULT_NAME_DATASET_CATEGORY_COUNTS = 'DatasetCategoryCounts'
     RESULT_NAME_BIN_COUNTS = 'BinCounts'
     RESULT_NAME_BIN_COUNTS_SIZES = 'BinCountsSizes'
 

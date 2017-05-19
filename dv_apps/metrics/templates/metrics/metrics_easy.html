@@ -52,59 +52,20 @@
 <!-- START: container -->
     <div class="container">
 
-<!-- START: Dataverses -->
-<!--
-    <div class="row">
-        <div class="col-xs-12 col-md-12">
-            <h3>Dataverses</h3>
-        </div>
-    </div>
--->
-
-    <div class="row">
-        <div class="col-xs-12 col-md-6">
-        {% include "metrics/visualizations/dataverses.html" %}
-        </div>
-
-        <div class="col-xs-12 col-md-6">
-        {% include "metrics/visualizations/dataverses_categories.html" %}
-        </div>
-    </div>
-<!-- END: Dataverses -->
-
  <!-- START: Datasets -->
- <!--
- <hr>
-
-  <div class="row">
-        <div class="col-xs-12 col-md-12">
-            <h3>Datasets</h3>
-        </div>
-    </div>
--->
     <div class="row">
         <div class="col-xs-12 col-md-6">
         {% include "metrics/visualizations/datasets.html" %}
         </div>
 
         <div class="col-xs-12 col-md-6">
-        {% include "metrics/visualizations/datasets_by_category.html" %}
+        {% include "metrics/visualizations/categories.html" %}
         {#% include "metrics/visualizations/file_content_types.html" %#}
         </div>
     </div>
 <!-- END: Datasets -->
 
-
 <!-- START: Files -->
-<!--
-<hr>
-
-    <div class="row">
-        <div class="col-xs-12 col-md-12">
-            <h3>Data Files</h3>
-        </div>
-    </div>
--->
     <div class="row">
       <div class="col-xs-12 col-md-6">
         {% include "metrics/visualizations/files_added.html" %}
@@ -115,6 +76,18 @@
       </div>
     </div>
 <!-- END: Files -->
+
+<!-- START: Deposits -->
+    <div class="row">
+      <div class="col-xs-12 col-md-6">
+        {% include "metrics/visualizations/dataset_deposits.html" %}
+      </div>
+
+      <div class="col-xs-12 col-md-6">
+        {% include "metrics/visualizations/dataset_deposits_no_bulk.html" %}
+      </div>
+    </div>
+<!-- END: Deposits -->
 
 
  <!-- START: Footer/Timestamp -->

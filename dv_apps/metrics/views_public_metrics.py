@@ -10,12 +10,12 @@ from django.shortcuts import render
 from django.http import JsonResponse, HttpResponseRedirect #, Http404
 from django.views.decorators.cache import cache_page
 from django.views.decorators.clickjacking import xframe_options_exempt
-from django.conf import settings
 
 from dv_apps.datafiles.models import Datafile, FileMetadata
 from dv_apps.metrics.stats_util_datasets import StatsMakerDatasets
 from dv_apps.metrics.stats_util_dataverses import StatsMakerDataverses
 from dv_apps.metrics.stats_util_files import StatsMakerFiles
+from dv_apps.metrics.stats_util_base import EASY_STATISTICS
 
 from dv_apps.utils.metrics_cache_time import get_metrics_cache_time
 from dv_apps.utils.date_helper import get_one_year_ago
@@ -50,9 +50,17 @@ def view_public_visualizations_last12(request):
 
     # start from the 1st day of last year's month
     #
-    date_filters = dict(start_date=one_year_ago.strftime('%Y-%m-01'))
+    filters = dict(start_date=one_year_ago.strftime('%Y-%m-01'))
+    if EASY_STATISTICS:
+        filters["category"] = request.GET.get("category")
+        if request.GET.get("start_date"):
+            filters["start_date"] = request.GET.get("start_date")
+        if request.GET.get("end_date"):
+            filters["end_date"] = request.GET.get("end_date")
+        if request.GET.get("relative"):
+            filters["relative"] = request.GET.get("relative")
 
-    return view_public_visualizations(request, **date_filters)
+    return view_public_visualizations(request, **filters)
 
 
 @cache_page(get_metrics_cache_time())
@@ -60,7 +68,6 @@ def view_public_visualizations(request, **kwargs):
     """
     Return HTML/D3Plus visualizations for a variety of public statistics
     """
-
     if kwargs and len(kwargs) > 0:
         # kwargs override GET parameters
         stats_datasets = StatsMakerDatasets(**kwargs)
@@ -73,7 +80,6 @@ def view_public_visualizations(request, **kwargs):
 
     # Start an OrderedDict
     resp_dict = OrderedDict()
-    resp_dict['easy_statistics'] = settings.EASY_STATISTICS
 
     # -------------------------
     # Dataverses created each month
@@ -103,9 +109,10 @@ def view_public_visualizations(request, **kwargs):
         resp_dict['dataset_counts_by_month_sql'] = stats_monthly_ds_counts.sql_query
 
 
-    stats_ds_count_by_subject = stats_datasets.get_dataset_subject_counts_published()
-    if not stats_ds_count_by_subject.has_error():
-        resp_dict['dataset_counts_by_subject'] = stats_ds_count_by_subject.result_data['records']
+    stats_ds_count_by_category = stats_datasets.get_dataset_category_counts_published()
+    if not stats_ds_count_by_category.has_error():
+        resp_dict['category'] = stats_datasets.get_category().capitalize()
+        resp_dict['dataset_counts_by_category'] = stats_ds_count_by_category.result_data['records']
         #resp_dict['dataset_counts_by_month_sql'] = stats_monthly_ds_counts.sql_query
 
     # -------------------------
@@ -136,13 +143,24 @@ def view_public_visualizations(request, **kwargs):
         resp_dict['file_content_types_top_20'] = list(stats_file_content_types.result_data)[:20]
         #resp_dict['file_content_types_json'] = json.dumps(file_content_types, indent=4)
     """
-    #success, datafile_content_type_counts =\ #stats_files.get_datafile_content_type_counts_published()
-    #if success:
-    #    resp_dict['datafile_content_type_counts'] = datafile_content_type_counts[:15]
+
+    # -----------------------------------
+    # Dataset deposits  each month - EASY
+    # -----------------------------------
+    # inclusive bulk deposits
+    stats_monthly_deposit_counts = stats_datasets.get_easy_deposit_count_by_month()
+    if not stats_monthly_deposit_counts.has_error():
+        resp_dict['deposit_counts_by_month'] = list(stats_monthly_deposit_counts.result_data['records'])
+    # exclusive bulk deposits
+    stats_monthly_deposit_counts = stats_datasets.get_easy_deposit_count_by_month(True)
+    if not stats_monthly_deposit_counts.has_error():
+        resp_dict['deposit_counts_by_month_no_bulk'] = list(stats_monthly_deposit_counts.result_data['records'])
 
 
-
-    return render(request, 'metrics/metrics_public.html', resp_dict)
+    if EASY_STATISTICS:
+        return render(request, 'metrics/metrics_easy.html', resp_dict)
+    else:
+        return render(request, 'metrics/metrics_public.html', resp_dict)
 
 
 
