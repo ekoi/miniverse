@@ -52,6 +52,18 @@
 <!-- START: container -->
     <div class="container">
 
+ <!-- START: Parameters -->
+    <div>
+        <form action="" method="post">{% csrf_token %}
+            <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <b>category:</b>&nbsp;{{ form.category }}&nbsp;
+            <b>start date:</b>&nbsp;{{ form.start_date }}&nbsp;
+            <b>end date:</b>&nbsp;{{ form.end_date }}&nbsp;&nbsp;&nbsp;
+            <input type="submit" value="Submit" />
+        </form>
+    </div>
+<!-- END: Parameters -->
+
  <!-- START: Datasets -->
     <div class="row">
         <div class="col-xs-12 col-md-6">

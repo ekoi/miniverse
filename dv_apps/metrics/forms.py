@@ -3,6 +3,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.template.loader import render_to_string
 
 from dv_apps.datafiles.models import FileMetadata
+from dv_apps.metrics.models import Metrics
 
 class FixContentTypeForm(forms.Form):
     """
@@ -67,3 +68,12 @@ class FixContentTypeForm(forms.Form):
                 new_content_type=self.cleaned_data['new_content_type'])
 
         return render_to_string('metrics/maintenance/fix_content_type.md', d)
+
+class Metrics(forms.ModelForm):
+    """
+    Parameters in making the graphics
+    """
+
+    class Meta:
+        model = Metrics
+        fields = ['category', 'start_date', 'end_date']
