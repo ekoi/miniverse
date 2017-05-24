@@ -20,7 +20,10 @@ from dv_apps.metrics.stats_util_base import EASY_STATISTICS
 from dv_apps.utils.metrics_cache_time import get_metrics_cache_time
 from dv_apps.utils.date_helper import get_one_year_ago
 
+from dv_apps.metrics.forms import Metrics
+
 FIVE_HOURS = 60 * 60 * 5
+
 
 """
 from django.core.cache import cache
@@ -51,14 +54,6 @@ def view_public_visualizations_last12(request):
     # start from the 1st day of last year's month
     #
     filters = dict(start_date=one_year_ago.strftime('%Y-%m-01'))
-    if EASY_STATISTICS:
-        filters["category"] = request.GET.get("category")
-        if request.GET.get("start_date"):
-            filters["start_date"] = request.GET.get("start_date")
-        if request.GET.get("end_date"):
-            filters["end_date"] = request.GET.get("end_date")
-        if request.GET.get("relative"):
-            filters["relative"] = request.GET.get("relative")
 
     return view_public_visualizations(request, **filters)
 
@@ -68,6 +63,15 @@ def view_public_visualizations(request, **kwargs):
     """
     Return HTML/D3Plus visualizations for a variety of public statistics
     """
+    if EASY_STATISTICS:
+        if request.method == "POST":
+            form = Metrics(request.POST)
+        else:
+            form = Metrics()
+        kwargs["category"] = form.data.get("category", "audience")
+        kwargs["start_date"] = form.data.get("start_date", "2008-01-01")
+        kwargs["end_date"] = form.data.get("end_date", "2099-12-31")
+
     if kwargs and len(kwargs) > 0:
         # kwargs override GET parameters
         stats_datasets = StatsMakerDatasets(**kwargs)
@@ -147,22 +151,21 @@ def view_public_visualizations(request, **kwargs):
     # -----------------------------------
     # Dataset deposits  each month - EASY
     # -----------------------------------
-    # inclusive bulk deposits
-    stats_monthly_deposit_counts = stats_datasets.get_easy_deposit_count_by_month()
-    if not stats_monthly_deposit_counts.has_error():
-        resp_dict['deposit_counts_by_month'] = list(stats_monthly_deposit_counts.result_data['records'])
-    # exclusive bulk deposits
-    stats_monthly_deposit_counts = stats_datasets.get_easy_deposit_count_by_month(True)
-    if not stats_monthly_deposit_counts.has_error():
-        resp_dict['deposit_counts_by_month_no_bulk'] = list(stats_monthly_deposit_counts.result_data['records'])
-
+    if EASY_STATISTICS:
+        # inclusive bulk deposits
+        stats_monthly_deposit_counts = stats_datasets.get_easy_deposit_count_by_month()
+        if not stats_monthly_deposit_counts.has_error():
+            resp_dict['deposit_counts_by_month'] = list(stats_monthly_deposit_counts.result_data['records'])
+        # exclusive bulk deposits
+        stats_monthly_deposit_counts = stats_datasets.get_easy_deposit_count_by_month(True)
+        if not stats_monthly_deposit_counts.has_error():
+            resp_dict['deposit_counts_by_month_no_bulk'] = list(stats_monthly_deposit_counts.result_data['records'])
 
     if EASY_STATISTICS:
+        resp_dict['form'] = form
         return render(request, 'metrics/metrics_easy.html', resp_dict)
     else:
         return render(request, 'metrics/metrics_public.html', resp_dict)
-
-
 
 @cache_page(get_metrics_cache_time())
 def view_public_visualizations_last12_dataverse_org(request):
