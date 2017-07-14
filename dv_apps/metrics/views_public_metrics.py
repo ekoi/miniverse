@@ -58,6 +58,36 @@ def view_public_visualizations_last12(request):
     return view_public_visualizations(request, **filters)
 
 @cache_page(get_metrics_cache_time())
+def downloads(request, **kwargs):
+    resp_dict = {}
+    """
+    Return HTML/D3Plus visualizations for a variety of public statistics
+    """
+    EASY_STATISTICS = 1
+    resp_dict = {}
+
+    if EASY_STATISTICS:
+        if request.method == "POST":
+            form = Metrics(request.POST)
+        else:
+            form = Metrics()
+        kwargs["category"] = form.data.get("category", "audience")
+        kwargs["start_date"] = form.data.get("start_date", "2017-01-01")
+        kwargs["end_date"] = form.data.get("end_date", "2017-12-31")
+
+    if kwargs and len(kwargs) > 0:
+        # kwargs override GET parameters
+        stats_datasets = StatsMakerDatasets(**kwargs)
+        stats_dvs = StatsMakerDataverses(**kwargs)
+        stats_files = StatsMakerFiles(**kwargs)
+    else:
+        stats_datasets = StatsMakerDatasets(**request.GET.dict())
+        stats_dvs = StatsMakerDataverses(**request.GET.dict())
+        stats_files = StatsMakerFiles(**request.GET.dict())
+    return render(request, 'metrics/download.html', resp_dict)
+
+
+@cache_page(get_metrics_cache_time())
 def view_easy_visualizations(request, **kwargs):
     resp_dict = {}
     """
