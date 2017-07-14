@@ -57,20 +57,81 @@ def view_public_visualizations_last12(request):
 
     return view_public_visualizations(request, **filters)
 
-
 @cache_page(get_metrics_cache_time())
-def view_public_visualizations(request, **kwargs):
+def view_easy_visualizations(request, **kwargs):
+    resp_dict = {}
     """
     Return HTML/D3Plus visualizations for a variety of public statistics
     """
+    EASY_STATISTICS = 1
+    resp_dict = {}
+
     if EASY_STATISTICS:
         if request.method == "POST":
             form = Metrics(request.POST)
         else:
             form = Metrics()
         kwargs["category"] = form.data.get("category", "audience")
-        kwargs["start_date"] = form.data.get("start_date", "2008-01-01")
-        kwargs["end_date"] = form.data.get("end_date", "2099-12-31")
+        kwargs["start_date"] = form.data.get("start_date", "2017-01-01")
+        kwargs["end_date"] = form.data.get("end_date", "2017-12-31")
+
+    if kwargs and len(kwargs) > 0:
+        # kwargs override GET parameters
+        stats_datasets = StatsMakerDatasets(**kwargs)
+        stats_dvs = StatsMakerDataverses(**kwargs)
+        stats_files = StatsMakerFiles(**kwargs)
+    else:
+        stats_datasets = StatsMakerDatasets(**request.GET.dict())
+        stats_dvs = StatsMakerDataverses(**request.GET.dict())
+        stats_files = StatsMakerFiles(**request.GET.dict())
+
+    # Start an OrderedDict
+    resp_dict = OrderedDict()
+    # -----------------------------------
+    # Dataset deposits  each month - EASY
+    # -----------------------------------
+    if EASY_STATISTICS:
+        # inclusive bulk deposits
+        stats_monthly_deposit_counts = stats_datasets.get_easy_deposit_count_by_month()
+        dataset_counts_by_category = stats_datasets.get_dataset_category_counts()
+        files_downloads = stats_files.get_file_downloads_by_month()
+        if not stats_monthly_deposit_counts.has_error():
+            resp_dict['deposit_counts_by_month'] = list(stats_monthly_deposit_counts.result_data['records'])
+        # exclusive bulk deposits
+        stats_monthly_deposit_counts = stats_datasets.get_easy_deposit_count_by_month(True)
+        if not stats_monthly_deposit_counts.has_error():
+            resp_dict['deposit_counts_by_month_no_bulk'] = list(stats_monthly_deposit_counts.result_data['records'])
+
+    if EASY_STATISTICS:
+        resp_dict['out'] = str(list(stats_monthly_deposit_counts.result_data['records']))
+        resp_dict['out'] = str(resp_dict['deposit_counts_by_month'])
+        resp_dict['out'] = str(dataset_counts_by_category.result_data['records'])
+        resp_dict['out'] = str(files_downloads.result_data['records'])
+        resp_dict['file_counts_by_month'] = list(stats_monthly_deposit_counts.result_data['records'])
+        resp_dict['deposit_counts_by_month'] = list(stats_monthly_deposit_counts.result_data['records'])
+        resp_dict['dataverse_counts_by_month_sql'] = 'sql'
+        resp_dict['dataset_counts_by_category'] = list(dataset_counts_by_category.result_data['records'])
+        resp_dict['file_downloads_by_month'] = list(files_downloads.result_data['records'])
+        resp_dict['form'] = form
+        return render(request, 'metrics/metrics_total.html', resp_dict)
+    else:
+        return render(request, 'metrics/metrics_public.html', resp_dict)
+
+@cache_page(get_metrics_cache_time())
+def view_public_visualizations(request, **kwargs):
+    """
+    Return HTML/D3Plus visualizations for a variety of public statistics
+    """
+    resp_dict = {}
+
+    if EASY_STATISTICS:
+        if request.method == "POST":
+            form = Metrics(request.POST)
+        else:
+            form = Metrics()
+        kwargs["category"] = form.data.get("category", "audience")
+        kwargs["start_date"] = form.data.get("start_date", "2017-01-01")
+        kwargs["end_date"] = form.data.get("end_date", "2017-12-31")
 
     if kwargs and len(kwargs) > 0:
         # kwargs override GET parameters
