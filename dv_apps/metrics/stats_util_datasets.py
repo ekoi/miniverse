@@ -279,12 +279,12 @@ class StatsMakerDatasets(StatsMakerBase):
         if exclude_bulk:
             pipe = [{'$match': {'$and': [{'type':'DATASET_DEPOSIT'}, {'roles': 'USER'},
                                          {'date': {'$gte': start_date}},{'date': {'$lte': end_date}}]}},
-                    {'$group': {'_id': {'$substr': ['$date', 0, 7]}, 'count': {'$sum': 1}}},
+                    {'$group': {'_id': {'$substr': ['$date', 0, 7]}, 'count': {'$sum': '$count'}}},
                     {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
                     {'$sort': {'yyyy_mm': 1}}]
         else:
             pipe = [{'$match': {'$and': [{'type': 'DATASET_DEPOSIT'}, {'date': {'$gte': start_date}}, {'date': {'$lte': end_date}}]}},
-                    {'$group': {'_id': {'$substr': ['$date', 0, 7]}, 'count': {'$sum': 1}}},
+                    {'$group': {'_id': {'$substr': ['$date', 0, 7]}, 'count': {'$sum': '$count'}}},
                     {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
                     {'$sort': {'yyyy_mm': 1}}]
         ds_counts_by_month = list(self.easy_logs.aggregate(pipeline=pipe))

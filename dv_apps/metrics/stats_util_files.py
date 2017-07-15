@@ -227,7 +227,7 @@ print stats_files.get_total_file_downloads().result_data
         end_date = filter_params["end_date"]
 
         pipe = [{'$match': {'$and': [{'date': {'$gte': start_date}}, {'date': {'$lte': end_date}}, {'$or': [{'type': 'DOWNLOAD_DATASET_REQUEST'}, {'type': 'DOWNLOAD_FILE_REQUEST'}]}]}},
-                {'$group': {'_id': {'$substr': ['$date', 0, 7]},'count': {'$sum': 1}}},
+                {'$group': {'_id': {'$substr': ['$date', 0, 7]},'count': {'$sum': '$count'}}},
                 {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
                 {'$sort': {'yyyy_mm': 1}}]
         file_counts_by_month = list(self.easy_logs.aggregate(pipeline=pipe))
@@ -410,7 +410,7 @@ print stats_files.get_total_file_downloads().result_data
         end_date = filter_params["end_date"]
 
         pipe = [{'$match': {'$and': [{'dateSubmitted': {'$gte': start_date}}, {'dateSubmitted': {'$lte': end_date}}]}},
-                {'$group': {'_id': {'$substr': ['$dateSubmitted', 0, 7]},'count': {'$sum': 1}}},
+                {'$group': {'_id': {'$substr': ['$dateSubmitted', 0, 7]},'count': {'$sum': '$count'}}},
                 {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
                 {'$sort': {'yyyy_mm': 1}}]
         file_counts_by_month = list(self.easy_file.aggregate(pipeline=pipe))
