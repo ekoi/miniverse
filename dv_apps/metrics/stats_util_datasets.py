@@ -251,49 +251,47 @@ class StatsMakerDatasets(StatsMakerBase):
 
     def get_easy_dataset_count_by_month(self):
 
-        # Retrieve the date parameters
-        # filter_params = self.get_easy_date_filter_params()
-        # start_date = filter_params["start_date"]
-        # end_date = filter_params["end_date"]
-        # pipe = [{'$match': {'$and': [{'dateSubmitted': {'$gte': start_date}}, {'dateSubmitted': {'$lte': end_date}}, {'datasetState': 'PUBLISHED'}]}},
-        #         {'$group': {'_id': {'$substr': ['$dateSubmitted', 0, 7]},'count': {'$sum': 1}}},
-        #         {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
-        #         {'$sort': {'yyyy_mm': 1}}]
-        # ds_counts_by_month = list(self.easy_dataset.aggregate(pipeline=pipe))
-        #
-        #
-        # pipe = [{'$match':
-        #              {'$and': [{'date': {'$gte': start_date}}, {'date': {'$lte': end_date}},
-        #                        # {'$or': [{'type': 'DATASET_DEPOSIT'}, {'type': 'DATASET_PUBLISHED'}]},
-        #                        {'type': 'DATASET_PUBLISHED'},
-        #                        {'dataset' : {'$ne': ''}}
-        #                        ]}},
-        #         {'$sort': {'date': 1}},
-        #         {'$group': {'_id': {'dataset': '$dataset'}, 'date': {'$last': '$date'}}},
-        #         {'$group': {'_id': {'$substr': ['$date', 0, 7]},'count': {'$sum': 1}}},
-        #         {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
-        #         {'$sort': {'yyyy_mm': 1}}]
-        #
-        #
-        # if self.cumulative:
-        #     pipe = [{'$match': {'$and': [{'dateSubmitted': {'$lt': start_date}}, {'datasetState': 'PUBLISHED'}]}}]
-        #     running_total = len(list(self.easy_dataset.aggregate(pipeline=pipe)))
-        # else:
-        #     running_total = 0
-        #
-        # return self.get_easy_counts_by_month(ds_counts_by_month, running_total)
+        filter_params = self.get_easy_date_filter_params()
+        start_date = filter_params["start_date"]
+        end_date = filter_params["end_date"]
+        pipe = [{'$match': {'$and': [{'dateSubmitted': {'$gte': start_date}}, {'dateSubmitted': {'$lte': end_date}}, {'datasetState': 'PUBLISHED'}]}},
+                {'$group': {'_id': {'$substr': ['$dateSubmitted', 0, 7]},'count': {'$sum': 1}}},
+                {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
+                {'$sort': {'yyyy_mm': 1}}]
+        ds_counts_by_month = list(self.easy_dataset.aggregate(pipeline=pipe))
+
+
+        pipe = [{'$match':
+                     {'$and': [{'date': {'$gte': start_date}}, {'date': {'$lte': end_date}},
+                               # {'$or': [{'type': 'DATASET_DEPOSIT'}, {'type': 'DATASET_PUBLISHED'}]},
+                               {'type': 'DATASET_PUBLISHED'},
+                               {'dataset' : {'$ne': ''}}
+                               ]}},
+                {'$sort': {'date': 1}},
+                {'$group': {'_id': {'dataset': '$dataset'}, 'date': {'$last': '$date'}}},
+                {'$group': {'_id': {'$substr': ['$date', 0, 7]},'count': {'$sum': 1}}},
+                {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
+                {'$sort': {'yyyy_mm': 1}}]
+
+
+        if self.cumulative:
+            pipe = [{'$match': {'$and': [{'dateSubmitted': {'$lt': start_date}}, {'datasetState': 'PUBLISHED'}]}}]
+            running_total = len(list(self.easy_dataset.aggregate(pipeline=pipe)))
+        else:
+            running_total = 0
+
+        return self.get_easy_counts_by_month(ds_counts_by_month, running_total)
 
         # In the old system number of datasets in a certain period is calculated by looking into log-events
         # (dataset-deposit and dataset-publish)
         # That is why we now simply call 'get_easy_deposit_count_by_month' method
-        return self.get_easy_deposit_count_by_month()
+        # return self.get_easy_deposit_count_by_month()
 
     def get_easy_deposit_count_by_month(self):
 
         filter_params = self.get_easy_date_filter_params()
         start_date = filter_params["start_date"]
         end_date = filter_params["end_date"]
-
 
         pipe = [{'$match':
                      {'$and': [{'date': {'$gte': start_date}}, {'date': {'$lte': end_date}},
