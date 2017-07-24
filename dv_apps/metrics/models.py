@@ -8,6 +8,14 @@ CATEGORY_CHOICES = (
     ('depositStatus', 'Deposit Status'),
     ('mimeType', 'Mime Type'),
 )
+DOWLOADS_CHOICES = (
+    ('datasets', '(Part of) dataset'),
+    ('files', 'File'),
+)
+CUMULATIVE_CHOICES = (
+    ('cumulative', 'Yes'),
+    ('noncumulative', 'No'),
+)
 START_DATE_CHOICES = (
     ('2008-01-01', '2008-01-01'),
     ('2009-01-01', '2009-01-01'),
@@ -32,6 +40,7 @@ END_DATE_CHOICES = (
     ('2016-12-31', '2016-12-31'),
     ('2017-12-31', '2017-12-31'),
     ('2099-12-31', '2099-12-31'),
+    ('2015-01-31', '2015-01-31'),
 )
 
 
@@ -45,6 +54,12 @@ class Metrics(models.Model):
     end_date = models.CharField(max_length=10,
                                 choices=END_DATE_CHOICES,
                                 default='2099-12-31')
+    downloads = models.CharField(max_length=50,
+                                choices=DOWLOADS_CHOICES,
+                                default='files')
+    cumulative = models.CharField(max_length=15,
+                                choices=CUMULATIVE_CHOICES,
+                                default='noncumulative')
 
     def __str__(self):
         return self.category

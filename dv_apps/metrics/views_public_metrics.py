@@ -71,6 +71,8 @@ def view_public_visualizations(request, **kwargs):
         kwargs["category"] = form.data.get("category", "audience")
         kwargs["start_date"] = form.data.get("start_date", "2008-01-01")
         kwargs["end_date"] = form.data.get("end_date", "2099-12-31")
+        kwargs["cumulative"] = form.data.get("cumulative", "noncumulative")
+        kwargs["downloads"] = form.data.get("downloads", "files")
 
     if kwargs and len(kwargs) > 0:
         # kwargs override GET parameters
@@ -127,6 +129,14 @@ def view_public_visualizations(request, **kwargs):
         resp_dict['file_counts_by_month'] = list(stats_monthly_file_counts.result_data['records'])
         resp_dict['file_counts_by_month_sql'] = stats_monthly_file_counts.sql_query
 
+    # ------------------------------------------------------
+    # Datasets (or just one file of it) downloaded, by month
+    # ------------------------------------------------------
+    stats_monthly_downloads = stats_files.get_file_downloads_by_month_published(include_pre_dv4_downloads=True)
+    if not stats_monthly_downloads.has_error():
+        resp_dict['file_downloads_by_month'] = list(stats_monthly_downloads.result_data['records'])
+        resp_dict['file_downloads_by_month_sql'] = stats_monthly_downloads.sql_query
+
     # -------------------------
     # Files downloaded, by month
     # -------------------------
@@ -157,9 +167,9 @@ def view_public_visualizations(request, **kwargs):
         if not stats_monthly_deposit_counts.has_error():
             resp_dict['deposit_counts_by_month'] = list(stats_monthly_deposit_counts.result_data['records'])
         # exclusive bulk deposits
-        stats_monthly_deposit_counts = stats_datasets.get_easy_deposit_count_by_month(True)
-        if not stats_monthly_deposit_counts.has_error():
-            resp_dict['deposit_counts_by_month_no_bulk'] = list(stats_monthly_deposit_counts.result_data['records'])
+        # stats_monthly_deposit_counts = stats_datasets.get_easy_deposit_count_by_month(True)
+        # if not stats_monthly_deposit_counts.has_error():
+        #     resp_dict['deposit_counts_by_month_no_bulk'] = list(stats_monthly_deposit_counts.result_data['records'])
 
     if EASY_STATISTICS:
         resp_dict['form'] = form

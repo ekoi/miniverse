@@ -81,11 +81,16 @@ class StatsMakerBase(object):
 
         # total count beginning point relative vs. from very beginning
         self.total_count_relative = kwargs.get('relative', None) == 'true'
+        self.cumulative = kwargs.get('cumulative', None) == 'cumulative'
+        self.file_downloads = kwargs.get('downloads', None) == 'files'
 
         if EASY_STATISTICS:
             self.easy_dataset = client.get_database('dataset').data
             self.easy_file = client.get_database('file').data
             self.easy_logs = client.get_database('logs').data
+            # self.easy_dataset = client.get_database('easy').dataset
+            # self.easy_file = client.get_database('easy').file
+            # self.easy_logs = client.get_database('easy').logs
 
 
     def add_error(self, err_msg, bad_http_status_code=None):
