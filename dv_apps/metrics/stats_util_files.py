@@ -214,29 +214,15 @@ print stats_files.get_total_file_downloads().result_data
             return self.get_error_msg_return()
 
         if EASY_STATISTICS:
-            return self.get_easy_file_downloads_by_month()
+            return self.get_easy_file_downloads_by_month(**extra_filters)
         else:
             return self.get_dataverse_file_downloads_by_month(**extra_filters)
 
 
     def get_easy_file_downloads_by_month(self, **extra_filters):
 
-        # Retrieve the date parameters
-        filter_params = self.get_easy_date_filter_params()
-        start_date = filter_params["start_date"]
-        end_date = filter_params["end_date"]
-
-        pipe = [{'$match': {'$and': [{'date': {'$gte': start_date}}, {'date': {'$lte': end_date}}, {'$or': [{'type': 'DOWNLOAD_DATASET_REQUEST'}, {'type': 'DOWNLOAD_FILE_REQUEST'}]}]}},
-                {'$group': {'_id': {'$substr': ['$date', 0, 7]},'count': {'$sum': '$count'}}},
-                {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
-                {'$sort': {'yyyy_mm': 1}}]
-        file_counts_by_month = list(self.easy_logs.aggregate(pipeline=pipe))
-
-        if self.total_count_relative:
-            running_total = 0
-        else:
-            pipe = [{'$match': {'$and': [{'date': {'$gte': start_date}}, {'$or': [{'type': 'DOWNLOAD_DATASET_REQUEST'}, {'type': 'DOWNLOAD_FILE_REQUEST'}]}]}}]
-            running_total = len(list(self.easy_logs.aggregate(pipeline=pipe)))
+        file_counts_by_month = self.get_easy_file_downloads_counts(**extra_filters)
+        running_total = self.get_easy_file_downloads_running_total(**extra_filters)
 
         formatted_records = []  # move from a queryset to a []
 
@@ -277,6 +263,63 @@ print stats_files.get_total_file_downloads().result_data
         data_dict['records'] = formatted_records
 
         return StatsResult.build_success_result(data_dict, None)
+
+    def get_easy_file_downloads_counts(self, **extra_filters):
+
+        # Retrieve the date parameters
+        filter_params = self.get_easy_date_filter_params()
+        start_date = filter_params["start_date"]
+        end_date = filter_params["end_date"]
+        file_downloads = self.file_downloads
+
+        if file_downloads:
+            pipe = [{'$match':
+                        {'$and': [{'date': {'$gte': start_date}}, {'date': {'$lte': end_date}},
+                                  {'$or': [{'type': 'DOWNLOAD_DATASET_REQUEST'}, {'type': 'DOWNLOAD_FILE_REQUEST'}]},
+                                  {'$or': [{'roles': 'USER'}, {'roles': ''}]}
+                                  ]}},
+                    {'$group': {'_id': {'$substr': ['$date', 0, 7]}, 'count': {'$sum': '$files'}}},
+                    {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
+                    {'$sort': {'yyyy_mm': 1}}]
+        else:
+            pipe = [{'$match':
+                        {'$and': [{'date': {'$gte': start_date}}, {'date': {'$lte': end_date}},
+                          {'$or': [{'type': 'DOWNLOAD_DATASET_REQUEST'}, {'type': 'DOWNLOAD_FILE_REQUEST'}]},
+                          {'$or': [{'roles': 'USER'}, {'roles': ''}]}
+                          ]}},
+                    {'$group': {'_id': {'$substr': ['$date', 0, 7]}, 'count': {'$sum': 1}}},
+                    {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
+                    {'$sort': {'yyyy_mm': 1}}]
+
+        return list(self.easy_logs.aggregate(pipeline=pipe))
+
+    def get_easy_file_downloads_running_total(self, **extra_filters):
+
+        filter_params = self.get_easy_date_filter_params()
+        start_date = filter_params["start_date"]
+        cumulative = self.cumulative
+        file_downloads = self.file_downloads
+
+        if cumulative:
+            if file_downloads:
+                pipe = [{'$match': {'$and': [{'date': {'$lt': start_date}},
+                                             {'$or': [{'type': 'DOWNLOAD_DATASET_REQUEST'}, {'type': 'DOWNLOAD_FILE_REQUEST'}]},
+                                             {'$or': [{'roles': 'USER'}, {'roles': ''}]}
+                                             ]}},
+                        {'$group': {'_id': None, 'count': {'$sum': '$files'}}}]
+            else:
+                pipe = [{'$match': {'$and': [{'date': {'$lt': start_date}},
+                                             {'$or': [{'type': 'DOWNLOAD_DATASET_REQUEST'}, {'type': 'DOWNLOAD_FILE_REQUEST'}]},
+                                             {'$or': [{'roles': 'USER'}, {'roles': ''}]}
+                                             ]}},
+                        {'$group': {'_id': None, 'count': {'$sum': '$count'}}}]
+            running_total_list = list(self.easy_logs.aggregate(pipeline=pipe))
+            return 0 if len(running_total_list) == 0 else running_total_list[0]['count']
+        else:
+            return 0
+
+        return list(self.easy_logs.aggregate(pipeline=pipe))
+
 
 
     def get_dataverse_file_downloads_by_month(self, **extra_filters):
@@ -409,17 +452,21 @@ print stats_files.get_total_file_downloads().result_data
         start_date = filter_params["start_date"]
         end_date = filter_params["end_date"]
 
-        pipe = [{'$match': {'$and': [{'dateSubmitted': {'$gte': start_date}}, {'dateSubmitted': {'$lte': end_date}}]}},
+        not_published = self.get_not_published_datasets()
+
+        pipe = [{'$match': {'$and': [{'dateSubmitted': {'$gte': start_date}}, {'dateSubmitted': {'$lte': end_date}}, {'datasetPid': {'$nin': not_published}}]}},
                 {'$group': {'_id': {'$substr': ['$dateSubmitted', 0, 7]},'count': {'$sum': '$count'}}},
                 {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
                 {'$sort': {'yyyy_mm': 1}}]
         file_counts_by_month = list(self.easy_file.aggregate(pipeline=pipe))
 
-        if self.total_count_relative:
-            running_total = 0
+        if self.cumulative:
+            pipe = [{'$match': {'$and': [{'dateSubmitted': {'$lt': start_date}}, {'dateSubmitted': {'$lte': end_date}}, {'datasetPid': {'$nin': not_published}}]}},
+                    {'$group': {'_id': None, 'count': {'$sum': '$count'}}}]
+            running_total_list = list(self.easy_file.aggregate(pipeline=pipe))
+            running_total = 0 if len(running_total_list) == 0 else running_total_list[0]['count']
         else:
-            pipe = [{'$match': {'dateSubmitted': {'$lt': start_date}}}]
-            running_total = len(list(self.easy_file.aggregate(pipeline=pipe)))
+            running_total = 0
 
         formatted_records = []  # move from a queryset to a []
 
@@ -458,6 +505,22 @@ print stats_files.get_total_file_downloads().result_data
         data_dict['records'] = formatted_records
 
         return StatsResult.build_success_result(data_dict, None)
+
+    def get_not_published_datasets(self):
+
+        filter_params = self.get_easy_date_filter_params()
+        start_date = filter_params["start_date"]
+        end_date = filter_params["end_date"]
+
+        pipe = [{'$match': {'$and': [{'dateSubmitted': {'$gte': start_date}}, {'dateSubmitted': {'$lte': end_date}}, {'datasetState': {'$ne':'PUBLISHED'}}]}},
+                {'$group': {'_id': None, 'not_published': {'$addToSet': '$pid'}}},
+                {'$project': {'_id': 0, 'not_published': 1}}]
+
+        other_than_published = list(self.easy_dataset.aggregate(pipeline=pipe))
+        if len(other_than_published) > 0:
+            return other_than_published[0]['not_published']
+        else:
+            return []
 
 
     def get_dataverse_file_count_by_month(self, date_param, **extra_filters):
