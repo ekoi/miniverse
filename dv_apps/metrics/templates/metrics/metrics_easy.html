@@ -58,7 +58,10 @@
             <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
             <b>category:</b>&nbsp;{{ form.category }}&nbsp;
             <b>start date:</b>&nbsp;{{ form.start_date }}&nbsp;
-            <b>end date:</b>&nbsp;{{ form.end_date }}&nbsp;&nbsp;&nbsp;
+            <b>end date:</b>&nbsp;{{ form.end_date }}
+            <br><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <b>cumulative:</b>&nbsp;{{ form.cumulative }}&nbsp;&nbsp;&nbsp;
+            <b>download type:</b>&nbsp;{{ form.downloads }}&nbsp;&nbsp;&nbsp;
             <input type="submit" value="Submit" />
         </form>
     </div>
@@ -77,26 +80,25 @@
     </div>
 <!-- END: Datasets -->
 
-<!-- START: Files -->
-    <div class="row">
-      <div class="col-xs-12 col-md-6">
-        {% include "metrics/visualizations/files_added.html" %}
-      </div>
-
-      <div class="col-xs-12 col-md-6">
-          {% include "metrics/visualizations/files_downloads.html" %}
-      </div>
-    </div>
-<!-- END: Files -->
-
-<!-- START: Deposits -->
+<!-- START: Deposits and Files -->
     <div class="row">
       <div class="col-xs-12 col-md-6">
         {% include "metrics/visualizations/dataset_deposits.html" %}
       </div>
 
+      <!--<div class="col-xs-12 col-md-6">-->
+        <!--{% include "metrics/visualizations/dataset_deposits_no_bulk.html" %}-->
+      <!--</div>-->
+
       <div class="col-xs-12 col-md-6">
-        {% include "metrics/visualizations/dataset_deposits_no_bulk.html" %}
+        {% include "metrics/visualizations/files_added.html" %}
+      </div>
+    </div>
+<!-- END: Files -->
+
+<!-- START: Dataset and File downloads -->
+      <div class="col-xs-12 col-md-6">
+          {% include "metrics/visualizations/files_downloads.html" %}
       </div>
     </div>
 <!-- END: Deposits -->
