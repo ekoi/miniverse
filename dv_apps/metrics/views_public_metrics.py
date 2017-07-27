@@ -118,7 +118,7 @@ def view_public_visualizations(request, **kwargs):
         # Dataset deposits  each month
         # ----------------------------
         # inclusive bulk deposits
-        stats_monthly_deposit_counts = stats_datasets.get_easy_deposit_count_by_month()
+        stats_monthly_deposit_counts = stats_datasets.get_easy_deposit_count_by_month(None, None, None, False)
         if not stats_monthly_deposit_counts.has_error():
             resp_dict['deposit_counts_by_month'] = list(stats_monthly_deposit_counts.result_data['records'])
         # exclusive bulk deposits

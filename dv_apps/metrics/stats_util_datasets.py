@@ -251,71 +251,99 @@ class StatsMakerDatasets(StatsMakerBase):
 
     def get_easy_dataset_count_by_month(self):
 
+        # Retrieve the date parameters
         filter_params = self.get_easy_date_filter_params()
         start_date = filter_params["start_date"]
         end_date = filter_params["end_date"]
-        pipe = [{'$match': {'$and': [{'dateSubmitted': {'$gte': start_date}}, {'dateSubmitted': {'$lte': end_date}}, {'datasetState': 'PUBLISHED'}]}},
-                {'$group': {'_id': {'$substr': ['$dateSubmitted', 0, 7]},'count': {'$sum': 1}}},
-                {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
-                {'$sort': {'yyyy_mm': 1}}]
-        ds_counts_by_month = list(self.easy_dataset.aggregate(pipeline=pipe))
-
-
-        pipe = [{'$match':
-                     {'$and': [{'date': {'$gte': start_date}}, {'date': {'$lte': end_date}},
-                               # {'$or': [{'type': 'DATASET_DEPOSIT'}, {'type': 'DATASET_PUBLISHED'}]},
-                               {'type': 'DATASET_PUBLISHED'},
-                               {'dataset' : {'$ne': ''}}
-                               ]}},
-                {'$sort': {'date': 1}},
-                {'$group': {'_id': {'dataset': '$dataset'}, 'date': {'$last': '$date'}}},
-                {'$group': {'_id': {'$substr': ['$date', 0, 7]},'count': {'$sum': 1}}},
-                {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
-                {'$sort': {'yyyy_mm': 1}}]
-
-
-        if self.cumulative:
-            pipe = [{'$match': {'$and': [{'dateSubmitted': {'$lt': start_date}}, {'datasetState': 'PUBLISHED'}]}}]
-            running_total = len(list(self.easy_dataset.aggregate(pipeline=pipe)))
-        else:
-            running_total = 0
-
-        return self.get_easy_counts_by_month(ds_counts_by_month, running_total)
+        # pipe = [{'$match': {'$and': [{'dateSubmitted': {'$gte': start_date}}, {'dateSubmitted': {'$lte': end_date}}, {'datasetState': 'PUBLISHED'}]}},
+        #         {'$group': {'_id': {'$substr': ['$dateSubmitted', 0, 7]},'count': {'$sum': 1}}},
+        #         {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
+        #         {'$sort': {'yyyy_mm': 1}}]
+        # ds_counts_by_month = list(self.easy_dataset.aggregate(pipeline=pipe))
+        #
+        #
+        # pipe = [{'$match':
+        #              {'$and': [{'date': {'$gte': start_date}}, {'date': {'$lte': end_date}},
+        #                        # {'$or': [{'type': 'DATASET_DEPOSIT'}, {'type': 'DATASET_PUBLISHED'}]},
+        #                        {'type': 'DATASET_PUBLISHED'},
+        #                        {'dataset' : {'$ne': ''}}
+        #                        ]}},
+        #         {'$sort': {'date': 1}},
+        #         {'$group': {'_id': {'dataset': '$dataset'}, 'date': {'$last': '$date'}}},
+        #         {'$group': {'_id': {'$substr': ['$date', 0, 7]},'count': {'$sum': 1}}},
+        #         {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
+        #         {'$sort': {'yyyy_mm': 1}}]
+        #
+        #
+        # if self.cumulative:
+        #     pipe = [{'$match': {'$and': [{'dateSubmitted': {'$lt': start_date}}, {'datasetState': 'PUBLISHED'}]}}]
+        #     running_total = len(list(self.easy_dataset.aggregate(pipeline=pipe)))
+        # else:
+        #     running_total = 0
+        #
+        # return self.get_easy_counts_by_month(ds_counts_by_month, running_total)
 
         # In the old system number of datasets in a certain period is calculated by looking into log-events
         # (dataset-deposit and dataset-publish)
         # That is why we now simply call 'get_easy_deposit_count_by_month' method
-        # return self.get_easy_deposit_count_by_month()
+        return self.get_easy_deposit_count_by_month(None, None, None, False)
 
-    def get_easy_deposit_count_by_month(self):
+    def get_easy_deposit_count_by_month(self, start_date, end_date, cumulative, file_count=True, type='DATASET_PUBLISHED'):
 
-        filter_params = self.get_easy_date_filter_params()
-        start_date = filter_params["start_date"]
-        end_date = filter_params["end_date"]
+        if not start_date:
+            filter_params = self.get_easy_date_filter_params()
+            start_date = filter_params["start_date"]
+            end_date = filter_params["end_date"]
+
+        if not cumulative:
+            cumulative = self.cumulative
+
+        # pipe = [{'$match':
+        #              {'$and': [{'date': {'$gte': start_date}}, {'date': {'$lte': end_date}},
+        #                        {'type': 'DATASET_PUBLISHED'},
+        #                        {'dataset': {'$ne': ''}}
+        #                        ]}},
+        #         {'$sort': {'date': 1}},
+        #         {'$group': {'_id': {'dataset': '$dataset'}, 'date': {'$last': '$date'}}},
+        #         {'$group': {'_id': {'$substr': ['$date', 0, 7]}, 'count': {'$sum': 1}}},
+        #         {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
+        #         {'$sort': {'yyyy_mm': 1}}]
 
         pipe = [{'$match':
                      {'$and': [{'date': {'$gte': start_date}}, {'date': {'$lte': end_date}},
-                               # {'$or': [{'type': 'DATASET_DEPOSIT'}, {'type': 'DATASET_PUBLISHED'}]},
-                               {'type': 'DATASET_PUBLISHED'},
+                               {'type': type},
                                {'dataset' : {'$ne': ''}}
                                ]}},
+                {'$lookup': {'from': 'dataset', 'localField': 'dataset', 'foreignField': 'pid', 'as': 'dataset_document'}},
                 {'$sort': {'date': 1}},
-                {'$group': {'_id': {'dataset': '$dataset'}, 'date': {'$last': '$date'}}},
-                {'$group': {'_id': {'$substr': ['$date', 0, 7]},'count': {'$sum': 1}}},
+                {'$group': {'_id': '$dataset', 'date': {'$last': '$date'}, 'ds':{'$last':{ '$arrayElemAt': ['$dataset_document', 0]}}}},
+                {'$match': {'ds.datasetState' : {'$eq': 'PUBLISHED'}}},
+                {'$group': {'_id': {'$substr': ['$date', 0, 7]},'count': {'$sum': {'$cond': { 'if': file_count, 'then': '$ds.files', 'else': 1 }}}}},
                 {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
                 {'$sort': {'yyyy_mm': 1}}]
 
         ds_counts_by_month = list(self.easy_logs.aggregate(pipeline=pipe))
 
-        if self.cumulative:
-            pipe = [{'$match': {'$and': [{'date': {'$lt': start_date}},
-                                         # {'$or': [{'type': 'DATASET_DEPOSIT'}, {'type': 'DATASET_PUBLISHED'}]},
-                                         {'type': 'DATASET_PUBLISHED'},
-                                         {'dataset': {'$ne': ''}}
-                                         ]}},
+        if cumulative:
+            # pipe = [{'$match': {'$and': [{'date': {'$lt': start_date}},
+            #                              {'type': 'DATASET_PUBLISHED'},
+            #                              {'dataset': {'$ne': ''}}
+            #                              ]}},
+            #         {'$sort': {'date': 1}},
+            #         {'$group': {'_id': {'dataset': '$dataset'}, 'date': {'$last': '$date'}}},
+            #         {'$group': {'_id': None, 'count': {'$sum': 1}}}]
+
+            pipe = [{'$match':
+                         {'$and': [{'date': {'$lt': start_date}},
+                                   {'type': type},
+                                   {'dataset': {'$ne': ''}}
+                                   ]}},
+                    {'$lookup': {'from': 'dataset', 'localField': 'dataset', 'foreignField': 'pid', 'as': 'dataset_document'}},
                     {'$sort': {'date': 1}},
-                    {'$group': {'_id': {'dataset': '$dataset'}, 'date': {'$last': '$date'}}},
-                    {'$group': {'_id': None, 'count': {'$sum': 1}}}]
+                    {'$group': {'_id': '$dataset', 'date': {'$last': '$date'},'ds': {'$last': {'$arrayElemAt': ['$dataset_document', 0]}}}},
+                    {'$match': {'ds.datasetState': {'$eq': 'PUBLISHED'}}},
+                    {'$group': {'_id': None, 'count': {'$sum': {'$cond': { 'if': file_count, 'then': '$ds.files', 'else': 1 }}}}}]
+
             running_total_list = list(self.easy_logs.aggregate(pipeline=pipe))
             running_total = 0 if len(running_total_list) == 0 else running_total_list[0]['count']
         else:
