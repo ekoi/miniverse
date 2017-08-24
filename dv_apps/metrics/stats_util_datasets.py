@@ -288,7 +288,7 @@ class StatsMakerDatasets(StatsMakerBase):
         # That is why we now simply call 'get_easy_deposit_count_by_month' method
         return self.get_easy_deposit_count_by_month(None, None, None, False)
 
-    def get_easy_deposit_count_by_month(self, start_date, end_date, cumulative, file_count=True, type='DATASET_PUBLISHED'):
+    def get_easy_deposit_count_by_month(self, start_date, end_date, cumulative, file_count=True):
 
         if not start_date:
             filter_params = self.get_easy_date_filter_params()
@@ -311,7 +311,7 @@ class StatsMakerDatasets(StatsMakerBase):
 
         pipe = [{'$match':
                      {'$and': [{'date': {'$gte': start_date}}, {'date': {'$lte': end_date}},
-                               {'type': type},
+                               {'$or': [{'type': 'DATASET_DEPOSIT'}, {'type': 'DATASET_PUBLISHED'}, {'type': 'DATASET_SUBMITTED'}]},
                                {'dataset' : {'$ne': ''}}
                                ]}},
                 {'$lookup': {'from': 'dataset', 'localField': 'dataset', 'foreignField': 'pid', 'as': 'dataset_document'}},
@@ -335,7 +335,7 @@ class StatsMakerDatasets(StatsMakerBase):
 
             pipe = [{'$match':
                          {'$and': [{'date': {'$lt': start_date}},
-                                   {'type': type},
+                                   {'$or': [{'type': 'DATASET_DEPOSIT'}, {'type': 'DATASET_PUBLISHED'}, {'type': 'DATASET_SUBMITTED'}]},
                                    {'dataset': {'$ne': ''}}
                                    ]}},
                     {'$lookup': {'from': 'dataset', 'localField': 'dataset', 'foreignField': 'pid', 'as': 'dataset_document'}},
