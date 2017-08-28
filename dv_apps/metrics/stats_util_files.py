@@ -277,7 +277,7 @@ print stats_files.get_total_file_downloads().result_data
             pipe = [{'$match':
                         {'$and': [{'date': {'$gte': start_date}}, {'date': {'$lte': end_date}},
                                   {'$or': [{'type': 'DOWNLOAD_DATASET_REQUEST'}, {'type': 'DOWNLOAD_FILE_REQUEST'}]},
-                                  {'$or': [{'roles': 'USER'}, {'roles': ''}]}
+                                  {'$or': [{'roles': 'USER'}, {'roles': None}, {'roles': ''}]}
                                   ]}},
                     {'$group': {'_id': {'$substr': ['$date', 0, 7]}, 'count': {'$sum': '$files'}}},
                     {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
@@ -286,7 +286,7 @@ print stats_files.get_total_file_downloads().result_data
             pipe = [{'$match':
                         {'$and': [{'date': {'$gte': start_date}}, {'date': {'$lte': end_date}},
                                   {'$or': [{'type': 'DOWNLOAD_DATASET_REQUEST'}, {'type': 'DOWNLOAD_FILE_REQUEST'}]},
-                                  {'$or': [{'roles': 'USER'}, {'roles': ''}]}
+                                  {'$or': [{'roles': 'USER'}, {'roles': None}, {'roles': ''}]}
                                   ]}},
                     {'$group': {'_id': {'date': '$date', 'user': '$user', 'dataset': '$dataset', 'ip': '$ip'}, 'date': {'$last': '$date'}}},
                     {'$group': {'_id': {'$substr': ['$date', 0, 7]}, 'count': {'$sum': 1}}},
@@ -306,13 +306,13 @@ print stats_files.get_total_file_downloads().result_data
             if file_downloads:
                 pipe = [{'$match': {'$and': [{'date': {'$lt': start_date}},
                                              {'$or': [{'type': 'DOWNLOAD_DATASET_REQUEST'}, {'type': 'DOWNLOAD_FILE_REQUEST'}]},
-                                             {'$or': [{'roles': 'USER'}, {'roles': ''}]}
+                                             {'$or': [{'roles': 'USER'}, {'roles': None}, {'roles': ''}]}
                                              ]}},
                         {'$group': {'_id': None, 'count': {'$sum': '$files'}}}]
             else:
                 pipe = [{'$match': {'$and': [{'date': {'$lt': start_date}},
                                              {'$or': [{'type': 'DOWNLOAD_DATASET_REQUEST'}, {'type': 'DOWNLOAD_FILE_REQUEST'}]},
-                                             {'$or': [{'roles': 'USER'}, {'roles': ''}]}
+                                             {'$or': [{'roles': 'USER'}, {'roles': None}, {'roles': ''}]}
                                              ]}},
                         {'$group': {'_id': {'date': '$date', 'user': '$user', 'dataset': '$dataset', 'ip': '$ip'}}},
                         {'$group': {'_id': None, 'count': {'$sum': 1}}}]
