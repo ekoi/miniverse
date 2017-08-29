@@ -286,17 +286,19 @@ class StatsMakerDatasets(StatsMakerBase):
         # In the old system number of datasets in a certain period is calculated by looking into log-events
         # (dataset-deposit and dataset-publish)
         # That is why we now simply call 'get_easy_deposit_count_by_month' method
-        return self.get_easy_deposit_count_by_month(None, None, None, False)
+        return self.get_easy_deposit_count_by_month(None, None, None, None, False)
 
-    def get_easy_deposit_count_by_month(self, start_date, end_date, cumulative, file_count=True):
+    def get_easy_deposit_count_by_month(self, start_date, end_date, cumulative_begin, noncumulative, file_count=True):
 
         if not start_date:
             filter_params = self.get_easy_date_filter_params()
             start_date = filter_params["start_date"]
             end_date = filter_params["end_date"]
 
-        if not cumulative:
-            cumulative = self.cumulative
+        if not cumulative_begin:
+            cumulative_begin = self.cumulative_begin
+        if not noncumulative:
+            noncumulative = self.noncumulative
 
         # pipe = [{'$match':
         #              {'$and': [{'date': {'$gte': start_date}}, {'date': {'$lte': end_date}},
@@ -326,7 +328,7 @@ class StatsMakerDatasets(StatsMakerBase):
 
         ds_counts_by_month = list(self.easy_logs.aggregate(pipe, allowDiskUse=True))
 
-        if cumulative:
+        if cumulative_begin:
             # pipe = [{'$match': {'$and': [{'date': {'$lt': start_date}},
             #                              {'type': 'DATASET_PUBLISHED'},
             #                              {'dataset': {'$ne': ''}}
@@ -353,10 +355,10 @@ class StatsMakerDatasets(StatsMakerBase):
         else:
             running_total = 0
 
-        return self.get_easy_counts_by_month(ds_counts_by_month, running_total)
+        return self.get_easy_counts_by_month(ds_counts_by_month, running_total, noncumulative)
 
 
-    def get_easy_counts_by_month(self, ds_counts_by_month, running_total):
+    def get_easy_counts_by_month(self, ds_counts_by_month, running_total, noncumulative):
 
         formatted_records = []
 
@@ -374,7 +376,10 @@ class StatsMakerDatasets(StatsMakerBase):
 
             # running total
             running_total += d['count']
-            fmt_dict['running_total'] = running_total
+            if noncumulative:
+                fmt_dict['running_total'] = d['count']
+            else:
+                fmt_dict['running_total'] = running_total
 
             # Add year and month numbers
             fmt_dict['year_num'] = year

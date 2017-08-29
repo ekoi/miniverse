@@ -224,6 +224,7 @@ print stats_files.get_total_file_downloads().result_data
 
         file_counts_by_month = self.get_easy_file_downloads_counts(**extra_filters)
         running_total = self.get_easy_file_downloads_running_total(**extra_filters)
+        noncumulative = self.noncumulative
 
         formatted_records = []  # move from a queryset to a []
 
@@ -242,7 +243,10 @@ print stats_files.get_total_file_downloads().result_data
 
             # running total
             running_total += d['count']
-            fmt_rec['running_total'] = running_total
+            if noncumulative:
+                fmt_rec['running_total'] = d['count']
+            else:
+                fmt_rec['running_total'] = running_total
 
             # Add year and month numbers
             fmt_rec['year_num'] = year
@@ -299,10 +303,10 @@ print stats_files.get_total_file_downloads().result_data
 
         filter_params = self.get_easy_date_filter_params()
         start_date = filter_params["start_date"]
-        cumulative = self.cumulative
+        cumulative_begin = self.cumulative_begin
         file_downloads = self.file_downloads
 
-        if cumulative:
+        if cumulative_begin:
             if file_downloads:
                 pipe = [{'$match': {'$and': [{'date': {'$lt': start_date}},
                                              {'$or': [{'type': 'DOWNLOAD_DATASET_REQUEST'}, {'type': 'DOWNLOAD_FILE_REQUEST'}]},
@@ -455,7 +459,8 @@ print stats_files.get_total_file_downloads().result_data
         filter_params = self.get_easy_date_filter_params()
         start_date = filter_params["start_date"]
         end_date = filter_params["end_date"]
-        cumulative = self.cumulative
+        cumulative_begin = self.cumulative_begin
+        noncumulative = self.noncumulative
         #
         # not_published = self.get_not_published_datasets()
         #
@@ -515,7 +520,7 @@ print stats_files.get_total_file_downloads().result_data
         # (dataset-deposit and dataset-publish)
         # That is why we now simply call 'get_easy_deposit_count_by_month' method
         statsMakerDatasets = StatsMakerDatasets()
-        return statsMakerDatasets.get_easy_deposit_count_by_month(start_date, end_date, cumulative, True)
+        return statsMakerDatasets.get_easy_deposit_count_by_month(start_date, end_date, cumulative_begin, noncumulative, True)
 
     # def get_not_published_datasets(self):
     #

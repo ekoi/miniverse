@@ -13,8 +13,9 @@ DOWLOADS_CHOICES = (
     ('files', 'File'),
 )
 CUMULATIVE_CHOICES = (
-    ('cumulative', 'Yes'),
-    ('noncumulative', 'No'),
+    ('noncumulative', 'Noncumulative'),
+    ('cumulative_period', 'Period'),
+    ('cumulative_begin', 'From beginning'),
 )
 START_DATE_CHOICES = (
     ('1991-01-01', '1991-01-01'),
@@ -63,7 +64,7 @@ class Metrics(models.Model):
                                 default='files')
     cumulative = models.CharField(max_length=15,
                                 choices=CUMULATIVE_CHOICES,
-                                default='noncumulative')
+                                default='cumulative_begin')
 
     def __str__(self):
         return self.category

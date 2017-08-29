@@ -3,6 +3,7 @@
 <div id="viz-file-downloads" class="viz"></div>
 <script>
 
+  var max_count_downloads = Number("{{max_count_downloads}}")
   var file_downloads_by_month = [
     {% for i in file_downloads_by_month %}
 
@@ -30,7 +31,7 @@
         .id("name")         // key for which our data is unique on
         .text({"value":"display_name"})       // key to use for display text
         .y({"value" : "Number of Downloads",
-            "range": get_metrics_viz_range(file_downloads_by_month, 50000) })         // key to use for y-axis
+            "range": get_metrics_viz_range(file_downloads_by_month, 50000, max_count_downloads) })         // key to use for y-axis
         //.x({"stacked": true, "value": "month"}))          // key to use for x-axis
         .x({"value":"Month"})
         .attrs(files_downloaded_attributes)

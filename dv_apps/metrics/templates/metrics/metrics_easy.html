@@ -22,10 +22,15 @@
 <script src="{% static "metrics/d3plus/js/d3plus.full.min.js" %}"></script>
 <script>
 
-  function get_metrics_viz_range(metric_array, mod_num){
+  function get_metrics_viz_range(metric_array, mod_num, max_count){
 
-      var fig_y_min = metric_array[0].running_total;
-      var fig_y_max = metric_array[metric_array.length-1].running_total;
+      if (max_count > 0) {
+          var fig_y_min = 0;
+          var fig_y_max = max_count;
+      } else {
+          var fig_y_min = metric_array[0].running_total;
+          var fig_y_max = metric_array[metric_array.length-1].running_total;
+      }
 
       if (fig_y_min < mod_num){
         return [0, fig_y_max + 10];

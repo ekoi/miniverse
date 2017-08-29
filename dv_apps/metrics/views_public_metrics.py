@@ -72,17 +72,16 @@ def view_public_visualizations(request, **kwargs):
         kwargs["category"] = form.data.get("category", "audience")
         kwargs["start_date"] = form.data.get("start_date", "2008-01-01")
         kwargs["end_date"] = form.data.get("end_date", "2099-12-31")
-        kwargs["cumulative"] = form.data.get("cumulative", "noncumulative")
+        kwargs["cumulative"] = form.data.get("cumulative", "cumulative_begin")
         kwargs["downloads"] = form.data.get("downloads", "files")
+        noncumulative = kwargs.get('cumulative', None) == 'noncumulative'
 
         if kwargs and len(kwargs) > 0:
             # kwargs override GET parameters
             stats_datasets = StatsMakerDatasets(**kwargs)
-            stats_dvs = StatsMakerDataverses(**kwargs)
             stats_files = StatsMakerFiles(**kwargs)
         else:
             stats_datasets = StatsMakerDatasets(**request.GET.dict())
-            stats_dvs = StatsMakerDataverses(**request.GET.dict())
             stats_files = StatsMakerFiles(**request.GET.dict())
 
         # Start an OrderedDict
@@ -94,6 +93,8 @@ def view_public_visualizations(request, **kwargs):
         stats_monthly_ds_counts = stats_datasets.get_dataset_counts_by_create_date_published()
         if not stats_monthly_ds_counts.has_error():
             resp_dict['dataset_counts_by_month'] = list(stats_monthly_ds_counts.result_data['records'])
+            if noncumulative and resp_dict['dataset_counts_by_month']:
+                resp_dict['max_count_datasets'] = str(max(item['count'] for item in resp_dict['dataset_counts_by_month']))
 
         stats_ds_count_by_category = stats_datasets.get_dataset_category_counts_published()
         if not stats_ds_count_by_category.has_error():
@@ -106,6 +107,8 @@ def view_public_visualizations(request, **kwargs):
         stats_monthly_file_counts = stats_files.get_file_count_by_month_published()
         if not stats_monthly_file_counts.has_error():
             resp_dict['file_counts_by_month'] = list(stats_monthly_file_counts.result_data['records'])
+            if noncumulative and resp_dict['file_counts_by_month']:
+                resp_dict['max_count_files'] = str(max(item['count'] for item in resp_dict['file_counts_by_month']))
 
         # ------------------------------------------------------
         # Datasets (or just one file of it) downloaded, by month
@@ -113,18 +116,22 @@ def view_public_visualizations(request, **kwargs):
         stats_monthly_downloads = stats_files.get_file_downloads_by_month_published(include_pre_dv4_downloads=True)
         if not stats_monthly_downloads.has_error():
             resp_dict['file_downloads_by_month'] = list(stats_monthly_downloads.result_data['records'])
+            if noncumulative and resp_dict['file_downloads_by_month']:
+                resp_dict['max_count_downloads'] = str(max(item['count'] for item in resp_dict['file_downloads_by_month']))
 
-        # ----------------------------
-        # Dataset deposits  each month
-        # ----------------------------
-        # inclusive bulk deposits
-        stats_monthly_deposit_counts = stats_datasets.get_easy_deposit_count_by_month(None, None, None, False)
-        if not stats_monthly_deposit_counts.has_error():
-            resp_dict['deposit_counts_by_month'] = list(stats_monthly_deposit_counts.result_data['records'])
-        # exclusive bulk deposits
-        # stats_monthly_deposit_counts = stats_datasets.get_easy_deposit_count_by_month(True)
+        # # ----------------------------
+        # # Dataset deposits  each month
+        # # ----------------------------
+        # # inclusive bulk deposits
+        # stats_monthly_deposit_counts = stats_datasets.get_easy_deposit_count_by_month(None, None, None, None, False)
         # if not stats_monthly_deposit_counts.has_error():
-        #     resp_dict['deposit_counts_by_month_no_bulk'] = list(stats_monthly_deposit_counts.result_data['records'])
+        #     resp_dict['deposit_counts_by_month'] = list(stats_monthly_deposit_counts.result_data['records'])
+        #     if noncumulative and resp_dict['deposit_counts_by_month']:
+        #         resp_dict['max_count_deposits'] = str(max(item['count'] for item in resp_dict['deposit_counts_by_month']))
+        # # exclusive bulk deposits
+        # # stats_monthly_deposit_counts = stats_datasets.get_easy_deposit_count_by_month(True)
+        # # if not stats_monthly_deposit_counts.has_error():
+        # #     resp_dict['deposit_counts_by_month_no_bulk'] = list(stats_monthly_deposit_counts.result_data['records'])
 
         resp_dict['form'] = form
         return render(request, 'metrics/metrics_easy.html', resp_dict)

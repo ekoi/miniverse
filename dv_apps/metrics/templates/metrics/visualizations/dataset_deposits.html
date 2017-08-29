@@ -2,6 +2,7 @@
 <div id="viz-deposits_by_month" class="viz"></div>
 <script>
 
+  var max_count_deposits = Number("{{max_count_deposits}}")
   var deposits_by_month = [
     {%for i in deposit_counts_by_month%}
 
@@ -29,7 +30,7 @@
         .id("name")         // key for which our data is unique on
         .text({"html":"true", "value":"display_name"})       // key to use for display text
         .y({"value" : "Number of Deposits",
-            "range": get_metrics_viz_range(deposits_by_month, 1000) })         // key to use for y-axis
+            "range": get_metrics_viz_range(deposits_by_month, 1000, max_count_deposits) })         // key to use for y-axis
         .x({"value":"Month"})          // key to use for x-axis
         .attrs(deposit_attributes)
         .color("hex")
