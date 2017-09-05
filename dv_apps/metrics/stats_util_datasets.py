@@ -160,7 +160,7 @@ class StatsMakerDatasets(StatsMakerBase):
             return self.get_error_msg_return()
 
         if EASY_STATISTICS:
-            return self.get_easy_dataset_count_by_month(None, None, None, None, None, None, False)
+            return self.get_easy_dataset_count_by_month()
         else:
             return self.get_dataverse_dataset_count_by_month(date_param, **extra_filters)
 
@@ -249,101 +249,22 @@ class StatsMakerDatasets(StatsMakerBase):
         return StatsResult.build_success_result(data_dict, sql_query)
 
 
-    def get_easy_dataset_count_by_month(self, start_date, end_date, publish_date, cumulative_begin, noncumulative, bulk_import_included, file_count=True):
+    def get_easy_dataset_count_by_month(self):
 
-        if not start_date:
-            filter_params = self.get_easy_date_filter_params()
-            start_date = filter_params["start_date"]
-            end_date = filter_params["end_date"]
+        filter_params = self.get_easy_date_filter_params()
+        start_date = filter_params["start_date"]
+        end_date = filter_params["end_date"]
 
-        if not cumulative_begin:
-            cumulative_begin = self.cumulative_begin
-        if not noncumulative:
-            noncumulative = self.noncumulative
-        if not publish_date:
-            publish_date = self.publish_date
-        if not bulk_import_included:
-            bulk_import_included = self.bulk_import_included
+        cumulative_begin = self.cumulative_begin
+        noncumulative = self.noncumulative
+        publish_date = self.publish_date
+        bulk_import_included = self.bulk_import_included
 
-        pipe = self.get_pipe(start_date, end_date, publish_date, bulk_import_included, file_count)
-        # if bulk_import_included:
-        #     pipe = [{'$match':
-        #                  {'$or': [{'type': 'DATASET_SUBMITTED'}, {'type': 'DATASET_DEPOSIT'},
-        #                           {'$and': [{'type': 'DATASET_PUBLISHED'},{'dataset': {'$ne': ''}}]},
-        #                           ]}},
-        #             {'$lookup': {'from': 'dataset', 'localField': 'dataset', 'foreignField': 'pid', 'as': 'dataset_document'}},
-        #             {'$sort': {'date': 1}},
-        #             {'$group': {'_id': '$dataset', 'date': {'$last': '$date'},
-        #                         'ds':{'$last': { '$arrayElemAt': ['$dataset_document', 0]}}
-        #                         }},
-        #             {'$match':
-        #                 {'$and': [
-        #                     {'ds.datasetState' : {'$eq': 'PUBLISHED'}},
-        #                     {'date': {'$gte': start_date}}, {'date': {'$lte': end_date}}
-        #                 ]}},
-        #             {'$group': {'_id': {'$substr': ['$date', 0, 7]},'count': {'$sum': {'$cond': { 'if': file_count, 'then': '$ds.files', 'else': 1 }}}}},
-        #             {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
-        #             {'$sort': {'yyyy_mm': 1}}]
-        # else:
-        #     pipe = [{'$match':
-        #                  {'$or': [{'type': 'DATASET_SUBMITTED'}, {'type': 'DATASET_DEPOSIT'},
-        #                           {'$and': [{'type': 'DATASET_PUBLISHED'},{'dataset': {'$ne': ''}}]},
-        #                           ]}},
-        #             {'$lookup': {'from': 'dataset', 'localField': 'dataset', 'foreignField': 'pid', 'as': 'dataset_document'}},
-        #             {'$sort': {'date': 1}},
-        #             {'$group': {'_id': '$dataset',
-        #                         'date': {'$last': '$date'},
-        #                         'ds':{'$last': { '$arrayElemAt': ['$dataset_document', 0]}},
-        #                         'type': { '$push': "$type"},
-        #                         }},
-        #             {'$match':
-        #                 {'$and': [
-        #                     {'ds.datasetState' : {'$eq': 'PUBLISHED'}},
-        #                     {'date': {'$gte': start_date}}, {'date': {'$lte': end_date}},
-        #                     {'type': {'$in': ['DATASET_DEPOSIT']}},
-        #                 ]}},
-        #             {'$group': {'_id': {'$substr': ['$date', 0, 7]},'count': {'$sum': {'$cond': { 'if': file_count, 'then': '$ds.files', 'else': 1 }}}}},
-        #             {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
-        #             {'$sort': {'yyyy_mm': 1}}]
-
+        pipe = self.get_pipe(start_date, end_date, publish_date, bulk_import_included)
         ds_counts_by_month = list(self.easy_logs.aggregate(pipe, allowDiskUse=True))
 
         if cumulative_begin:
-            pipe = self.get_pipe_cumulative(start_date, publish_date, bulk_import_included, file_count)
-            # if bulk_import_included:
-            #     pipe = [{'$match':
-            #              {'$or': [{'type': 'DATASET_SUBMITTED'}, {'type': 'DATASET_DEPOSIT'},
-            #                       {'$and': [{'type': 'DATASET_PUBLISHED'}, {'dataset': {'$ne': ''}}]},
-            #                       ]}},
-            #         {'$lookup': {'from': 'dataset', 'localField': 'dataset', 'foreignField': 'pid', 'as': 'dataset_document'}},
-            #         {'$sort': {'date': 1}},
-            #         {'$group': {'_id': '$dataset', 'date': {'$last': '$date'},'ds': {'$last': {'$arrayElemAt': ['$dataset_document', 0]}}}},
-            #         {'$match':
-            #              {'$and': [
-            #                  {'ds.datasetState': {'$eq': 'PUBLISHED'}},
-            #                  {'date': {'$lt': start_date}}
-            #                 ]}},
-            #         {'$group': {'_id': None, 'count': {'$sum': {'$cond': {'if': file_count, 'then': '$ds.files', 'else': 1}}}}}]
-            # else:
-            #     pipe = [{'$match':
-            #              {'$or': [{'type': 'DATASET_SUBMITTED'}, {'type': 'DATASET_DEPOSIT'},
-            #                       {'$and': [{'type': 'DATASET_PUBLISHED'}, {'dataset': {'$ne': ''}}]},
-            #                       ]}},
-            #         {'$lookup': {'from': 'dataset', 'localField': 'dataset', 'foreignField': 'pid', 'as': 'dataset_document'}},
-            #         {'$sort': {'date': 1}},
-            #         {'$group': {'_id': '$dataset',
-            #                     'date': {'$last': '$date'},
-            #                     'ds':{'$last': { '$arrayElemAt': ['$dataset_document', 0]}},
-            #                     'type': { '$push': "$type"},
-            #                     }},
-            #         {'$match':
-            #              {'$and': [
-            #                  {'ds.datasetState': {'$eq': 'PUBLISHED'}},
-            #                  {'date': {'$lt': start_date}},
-            #                  {'type': {'$in': ['DATASET_DEPOSIT']}},
-            #                 ]}},
-            #         {'$group': {'_id': None, 'count': {'$sum': {'$cond': {'if': file_count, 'then': '$ds.files', 'else': 1}}}}}]
-
+            pipe = self.get_pipe_cumulative(start_date, publish_date, bulk_import_included)
             running_total_list = list(self.easy_logs.aggregate(pipe, allowDiskUse=True))
             running_total = 0 if len(running_total_list) == 0 else running_total_list[0]['count']
         else:
@@ -351,7 +272,7 @@ class StatsMakerDatasets(StatsMakerBase):
 
         return self.get_easy_counts_by_month(ds_counts_by_month, running_total, noncumulative)
 
-    def get_pipe(self, start_date, end_date, publish_date, bulk_import_included, file_count):
+    def get_pipe(self, start_date, end_date, publish_date, bulk_import_included):
 
         dataset_published = 'DATASET_PUBLISHED' if publish_date else 'no go'
         if bulk_import_included:
@@ -369,7 +290,7 @@ class StatsMakerDatasets(StatsMakerBase):
                             {'ds.datasetState' : {'$eq': 'PUBLISHED'}},
                             {'date': {'$gte': start_date}}, {'date': {'$lte': end_date}}
                         ]}},
-                    {'$group': {'_id': {'$substr': ['$date', 0, 7]},'count': {'$sum': {'$cond': { 'if': file_count, 'then': '$ds.files', 'else': 1 }}}}},
+                    {'$group': {'_id': {'$substr': ['$date', 0, 7]},'count': {'$sum': 1}}},
                     {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
                     {'$sort': {'yyyy_mm': 1}}]
         else:
@@ -390,11 +311,11 @@ class StatsMakerDatasets(StatsMakerBase):
                             {'date': {'$gte': start_date}}, {'date': {'$lte': end_date}},
                             {'type': {'$in': ['DATASET_DEPOSIT']}},
                         ]}},
-                    {'$group': {'_id': {'$substr': ['$date', 0, 7]},'count': {'$sum': {'$cond': { 'if': file_count, 'then': '$ds.files', 'else': 1 }}}}},
+                    {'$group': {'_id': {'$substr': ['$date', 0, 7]},'count': {'$sum': 1}}},
                     {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
                     {'$sort': {'yyyy_mm': 1}}]
 
-    def get_pipe_cumulative(self, start_date, publish_date, bulk_import_included, file_count):
+    def get_pipe_cumulative(self, start_date, publish_date, bulk_import_included):
 
         if bulk_import_included:
             return [{'$match':
@@ -412,7 +333,7 @@ class StatsMakerDatasets(StatsMakerBase):
                             {'date': {'$lt': start_date}}
                         ]}},
                     {'$group': {'_id': None,
-                                'count': {'$sum': {'$cond': {'if': file_count, 'then': '$ds.files', 'else': 1}}}}}]
+                                'count': {'$sum': 1}}}]
         else:
             return [{'$match':
                          {'$or': [{'type': 'DATASET_SUBMITTED'}, {'type': 'DATASET_DEPOSIT'},
@@ -433,7 +354,7 @@ class StatsMakerDatasets(StatsMakerBase):
                             {'type': {'$in': ['DATASET_DEPOSIT']}},
                         ]}},
                     {'$group': {'_id': None,
-                                'count': {'$sum': {'$cond': {'if': file_count, 'then': '$ds.files', 'else': 1}}}}}]
+                                'count': {'$sum': 1}}}]
 
     def get_easy_counts_by_month(self, ds_counts_by_month, running_total, noncumulative):
 
