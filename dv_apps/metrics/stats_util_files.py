@@ -521,10 +521,11 @@ print stats_files.get_total_file_downloads().result_data
 
     def get_pipe_cumulative(self, start_date, publish_date, bulk_import_included):
 
+        dataset_published = 'DATASET_PUBLISHED' if publish_date else 'no go'
         if bulk_import_included:
             return [{'$match':
                          {'$or': [{'type': 'DATASET_SUBMITTED'}, {'type': 'DATASET_DEPOSIT'},
-                                  {'$and': [{'type': 'DATASET_PUBLISHED'}, {'dataset': {'$ne': ''}}]},
+                                  {'$and': [{'type': dataset_published}, {'dataset': {'$ne': ''}}]},
                                   ]}},
                     {'$lookup': {'from': 'dataset', 'localField': 'dataset', 'foreignField': 'pid',
                                  'as': 'dataset_document'}},

@@ -75,10 +75,10 @@ class Metrics(models.Model):
                                 default='cumulative_period')
     date_type = models.CharField(max_length=15,
                                 choices=DATE_CHOICES,
-                                default='bulk_included')
+                                default='publish')
     bulk_import_included = models.CharField(max_length=15,
                                 choices=IMPORT_CHOICES,
-                                default='publish')
+                                default='bulk_included')
 
     def __str__(self):
         return self.category
