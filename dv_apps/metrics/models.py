@@ -17,6 +17,14 @@ CUMULATIVE_CHOICES = (
     ('cumulative_period', 'Period'),
     ('cumulative_begin', 'From beginning'),
 )
+DATE_CHOICES = (
+    ('deposit', 'Deposit date'),
+    ('publish', 'Publish date'),
+)
+IMPORT_CHOICES = (
+    ('bulk_included', 'Bulk imports included'),
+    ('bulk_excluded', 'Bulk imports excluded'),
+)
 START_DATE_CHOICES = (
     ('1991-01-01', '1991-01-01'),
     ('2007-01-01', '2007-01-01'),
@@ -58,13 +66,19 @@ class Metrics(models.Model):
                                 default='2008-01-01')
     end_date = models.CharField(max_length=10,
                                 choices=END_DATE_CHOICES,
-                                default='2099-12-31')
+                                default='2017-12-31')
     downloads = models.CharField(max_length=50,
                                 choices=DOWLOADS_CHOICES,
                                 default='files')
     cumulative = models.CharField(max_length=15,
                                 choices=CUMULATIVE_CHOICES,
-                                default='cumulative_begin')
+                                default='cumulative_period')
+    date_type = models.CharField(max_length=15,
+                                choices=DATE_CHOICES,
+                                default='bulk_included')
+    bulk_import_included = models.CharField(max_length=15,
+                                choices=IMPORT_CHOICES,
+                                default='publish')
 
     def __str__(self):
         return self.category

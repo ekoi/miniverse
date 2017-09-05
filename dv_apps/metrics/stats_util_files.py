@@ -461,6 +461,8 @@ print stats_files.get_total_file_downloads().result_data
         end_date = filter_params["end_date"]
         cumulative_begin = self.cumulative_begin
         noncumulative = self.noncumulative
+        publish_date = self.publish_date
+        bulk_import_included = self.bulk_import_included
         #
         # not_published = self.get_not_published_datasets()
         #
@@ -520,7 +522,7 @@ print stats_files.get_total_file_downloads().result_data
         # (dataset-deposit and dataset-publish)
         # That is why we now simply call 'get_easy_deposit_count_by_month' method
         statsMakerDatasets = StatsMakerDatasets()
-        return statsMakerDatasets.get_easy_deposit_count_by_month(start_date, end_date, cumulative_begin, noncumulative, True)
+        return statsMakerDatasets.get_easy_dataset_count_by_month(start_date, end_date, publish_date, cumulative_begin, noncumulative, bulk_import_included, True)
 
     # def get_not_published_datasets(self):
     #

@@ -86,6 +86,12 @@ class StatsMakerBase(object):
         # download type
         self.file_downloads = kwargs.get('downloads', None) == 'files'
 
+        # date type
+        self.publish_date = kwargs.get('date_type', None) == 'publish'
+
+        # import type
+        self.bulk_import_included = kwargs.get('bulk_import_included', None) == 'bulk_included'
+
         if EASY_STATISTICS:
             self.easy_dataset = client.get_database('easy').dataset
             self.easy_file = client.get_database('easy').file
