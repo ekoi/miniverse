@@ -260,11 +260,13 @@ class StatsMakerDatasets(StatsMakerBase):
         publish_date = self.publish_date
         bulk_import_included = self.bulk_import_included
 
-        pipe = self.get_pipe(start_date, end_date, publish_date, bulk_import_included)
+        not_published = self.get_not_published_datasets()
+
+        pipe = self.get_pipe(start_date, end_date, publish_date, bulk_import_included, not_published)
         ds_counts_by_month = list(self.easy_logs.aggregate(pipe, allowDiskUse=True))
 
         if cumulative_begin:
-            pipe = self.get_pipe_cumulative(start_date, publish_date, bulk_import_included)
+            pipe = self.get_pipe_cumulative(start_date, publish_date, bulk_import_included, not_published)
             running_total_list = list(self.easy_logs.aggregate(pipe, allowDiskUse=True))
             running_total = 0 if len(running_total_list) == 0 else running_total_list[0]['count']
         else:
@@ -272,7 +274,7 @@ class StatsMakerDatasets(StatsMakerBase):
 
         return self.get_easy_counts_by_month(ds_counts_by_month, running_total, noncumulative)
 
-    def get_pipe(self, start_date, end_date, publish_date, bulk_import_included):
+    def get_pipe(self, start_date, end_date, publish_date, bulk_import_included, not_published):
 
         dataset_published = 'DATASET_PUBLISHED' if publish_date else 'no go'
         if bulk_import_included:
@@ -280,14 +282,12 @@ class StatsMakerDatasets(StatsMakerBase):
                          {'$or': [{'type': 'DATASET_SUBMITTED'}, {'type': 'DATASET_DEPOSIT'},
                                   {'$and': [{'type': dataset_published},{'dataset': {'$ne': ''}}]},
                                   ]}},
-                    {'$lookup': {'from': 'dataset', 'localField': 'dataset', 'foreignField': 'pid', 'as': 'dataset_document'}},
                     {'$sort': {'date': 1}},
                     {'$group': {'_id': '$dataset', 'date': {'$last': '$date'},
-                                'ds':{'$last': { '$arrayElemAt': ['$dataset_document', 0]}}
                                 }},
                     {'$match':
                         {'$and': [
-                            {'ds.datasetState' : {'$eq': 'PUBLISHED'}},
+                            {'_id': {'$nin': not_published}},
                             {'date': {'$gte': start_date}}, {'date': {'$lte': end_date}}
                         ]}},
                     {'$group': {'_id': {'$substr': ['$date', 0, 7]},'count': {'$sum': 1}}},
@@ -298,16 +298,14 @@ class StatsMakerDatasets(StatsMakerBase):
                          {'$or': [{'type': 'DATASET_SUBMITTED'}, {'type': 'DATASET_DEPOSIT'},
                                   {'$and': [{'type': dataset_published},{'dataset': {'$ne': ''}}]},
                                   ]}},
-                    {'$lookup': {'from': 'dataset', 'localField': 'dataset', 'foreignField': 'pid', 'as': 'dataset_document'}},
                     {'$sort': {'date': 1}},
                     {'$group': {'_id': '$dataset',
                                 'date': {'$last': '$date'},
-                                'ds':{'$last': { '$arrayElemAt': ['$dataset_document', 0]}},
                                 'type': { '$push': "$type"},
                                 }},
                     {'$match':
                         {'$and': [
-                            {'ds.datasetState' : {'$eq': 'PUBLISHED'}},
+                            {'_id': {'$nin': not_published}},
                             {'date': {'$gte': start_date}}, {'date': {'$lte': end_date}},
                             {'type': {'$in': ['DATASET_DEPOSIT']}},
                         ]}},
@@ -315,21 +313,19 @@ class StatsMakerDatasets(StatsMakerBase):
                     {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
                     {'$sort': {'yyyy_mm': 1}}]
 
-    def get_pipe_cumulative(self, start_date, publish_date, bulk_import_included):
+    def get_pipe_cumulative(self, start_date, publish_date, bulk_import_included, not_published):
 
+        dataset_published = 'DATASET_PUBLISHED' if publish_date else 'no go'
         if bulk_import_included:
             return [{'$match':
                          {'$or': [{'type': 'DATASET_SUBMITTED'}, {'type': 'DATASET_DEPOSIT'},
-                                  {'$and': [{'type': 'DATASET_PUBLISHED'}, {'dataset': {'$ne': ''}}]},
+                                  {'$and': [{'type': dataset_published}, {'dataset': {'$ne': ''}}]},
                                   ]}},
-                    {'$lookup': {'from': 'dataset', 'localField': 'dataset', 'foreignField': 'pid',
-                                 'as': 'dataset_document'}},
                     {'$sort': {'date': 1}},
-                    {'$group': {'_id': '$dataset', 'date': {'$last': '$date'},
-                                'ds': {'$last': {'$arrayElemAt': ['$dataset_document', 0]}}}},
+                    {'$group': {'_id': '$dataset', 'date': {'$last': '$date'}}},
                     {'$match':
                         {'$and': [
-                            {'ds.datasetState': {'$eq': 'PUBLISHED'}},
+                            {'_id': {'$nin': not_published}},
                             {'date': {'$lt': start_date}}
                         ]}},
                     {'$group': {'_id': None,
@@ -339,17 +335,14 @@ class StatsMakerDatasets(StatsMakerBase):
                          {'$or': [{'type': 'DATASET_SUBMITTED'}, {'type': 'DATASET_DEPOSIT'},
                                   {'$and': [{'type': 'DATASET_PUBLISHED'}, {'dataset': {'$ne': ''}}]},
                                   ]}},
-                    {'$lookup': {'from': 'dataset', 'localField': 'dataset', 'foreignField': 'pid',
-                                 'as': 'dataset_document'}},
                     {'$sort': {'date': 1}},
                     {'$group': {'_id': '$dataset',
                                 'date': {'$last': '$date'},
-                                'ds': {'$last': {'$arrayElemAt': ['$dataset_document', 0]}},
                                 'type': {'$push': "$type"},
                                 }},
                     {'$match':
                         {'$and': [
-                            {'ds.datasetState': {'$eq': 'PUBLISHED'}},
+                            {'_id': {'$nin': not_published}},
                             {'date': {'$lt': start_date}},
                             {'type': {'$in': ['DATASET_DEPOSIT']}},
                         ]}},
@@ -401,6 +394,18 @@ class StatsMakerDatasets(StatsMakerBase):
 
         return StatsResult.build_success_result(data_dict, None)
 
+
+    def get_not_published_datasets(self):
+
+        pipe = [{'$match': {'datasetState': {'$ne': 'PUBLISHED'}}},
+                {'$group': {'_id': None, 'not_published': {'$addToSet': '$pid'}}},
+                {'$project': {'_id': 0, 'not_published': 1}}]
+
+        not_published = list(self.easy_dataset.aggregate(pipeline=pipe))
+        if len(not_published) > 0:
+            return not_published[0]['not_published']
+        else:
+            return []
 
     def get_dataset_category_counts_published(self):
         """Published Dataset counts by category"""
