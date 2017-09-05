@@ -542,7 +542,7 @@ print stats_files.get_total_file_downloads().result_data
         else:
             return [{'$match':
                          {'$or': [{'type': 'DATASET_SUBMITTED'}, {'type': 'DATASET_DEPOSIT'},
-                                  {'$and': [{'type': 'DATASET_PUBLISHED'}, {'dataset': {'$ne': ''}}]},
+                                  {'$and': [{'type': dataset_published}, {'dataset': {'$ne': ''}}]},
                                   ]}},
                     {'$lookup': {'from': 'dataset', 'localField': 'dataset', 'foreignField': 'pid',
                                  'as': 'dataset_document'}},

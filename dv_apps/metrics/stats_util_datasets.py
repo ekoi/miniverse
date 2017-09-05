@@ -333,7 +333,7 @@ class StatsMakerDatasets(StatsMakerBase):
         else:
             return [{'$match':
                          {'$or': [{'type': 'DATASET_SUBMITTED'}, {'type': 'DATASET_DEPOSIT'},
-                                  {'$and': [{'type': 'DATASET_PUBLISHED'}, {'dataset': {'$ne': ''}}]},
+                                  {'$and': [{'type': dataset_published}, {'dataset': {'$ne': ''}}]},
                                   ]}},
                     {'$sort': {'date': 1}},
                     {'$group': {'_id': '$dataset',
