@@ -121,19 +121,19 @@ def view_public_visualizations(request, **kwargs):
             if noncumulative and resp_dict['file_downloads_by_month']:
                 resp_dict['max_count_downloads'] = str(max(item['count'] for item in resp_dict['file_downloads_by_month']))
 
-        # ----------------------------
-        # Dataset deposits  each month
-        # ----------------------------
-        # inclusive bulk deposits
-        stats_monthly_deposit_counts = stats_datasets.get_easy_dataset_count_by_month()
-        if not stats_monthly_deposit_counts.has_error():
-            resp_dict['deposit_counts_by_month'] = list(stats_monthly_deposit_counts.result_data['records'])
-            if noncumulative and resp_dict['deposit_counts_by_month']:
-                resp_dict['max_count_deposits'] = str(max(item['count'] for item in resp_dict['deposit_counts_by_month']))
-        # exclusive bulk deposits
-        # stats_monthly_deposit_counts = stats_datasets.get_easy_deposit_count_by_month(True)
+        # # ----------------------------
+        # # Dataset deposits  each month
+        # # ----------------------------
+        # # inclusive bulk deposits
+        # stats_monthly_deposit_counts = stats_datasets.get_easy_dataset_count_by_month()
         # if not stats_monthly_deposit_counts.has_error():
-        #     resp_dict['deposit_counts_by_month_no_bulk'] = list(stats_monthly_deposit_counts.result_data['records'])
+        #     resp_dict['deposit_counts_by_month'] = list(stats_monthly_deposit_counts.result_data['records'])
+        #     if noncumulative and resp_dict['deposit_counts_by_month']:
+        #         resp_dict['max_count_deposits'] = str(max(item['count'] for item in resp_dict['deposit_counts_by_month']))
+        # # exclusive bulk deposits
+        # # stats_monthly_deposit_counts = stats_datasets.get_easy_deposit_count_by_month(True)
+        # # if not stats_monthly_deposit_counts.has_error():
+        # #     resp_dict['deposit_counts_by_month_no_bulk'] = list(stats_monthly_deposit_counts.result_data['records'])
 
         resp_dict['form'] = form
         return render(request, 'metrics/metrics_easy.html', resp_dict)
