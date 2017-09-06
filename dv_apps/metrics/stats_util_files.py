@@ -484,17 +484,16 @@ print stats_files.get_total_file_downloads().result_data
                          {'$or': [{'type': 'DATASET_SUBMITTED'}, {'type': 'DATASET_DEPOSIT'},
                                   {'$and': [{'type': dataset_published},{'dataset': {'$ne': ''}}]},
                                   ]}},
-                    {'$lookup': {'from': 'dataset', 'localField': 'dataset', 'foreignField': 'pid', 'as': 'dataset_document'}},
                     {'$sort': {'date': 1}},
-                    {'$group': {'_id': '$dataset', 'date': {'$last': '$date'},
-                                'ds':{'$last': { '$arrayElemAt': ['$dataset_document', 0]}}
-                                }},
+                    {'$group': {'_id': '$dataset', 'date': {'$last': '$date'}}},
+                    {'$lookup': {'from': 'dataset', 'localField': '_id', 'foreignField': 'pid', 'as': 'ds'}},
+                    {'$unwind': '$ds'},
                     {'$match':
                         {'$and': [
                             {'ds.datasetState' : {'$eq': 'PUBLISHED'}},
                             {'date': {'$gte': start_date}}, {'date': {'$lte': end_date}}
                         ]}},
-                    {'$group': {'_id': {'$substr': ['$date', 0, 7]},'count': {'$sum': '$ds.files'}}},
+                    {'$group': {'_id': {'$substr': ['$date', 0, 7]}, 'count': {'$sum': '$ds.files'}}},
                     {'$project': {'_id': 0, 'yyyy_mm': '$_id', 'count': 1}},
                     {'$sort': {'yyyy_mm': 1}}]
         else:
@@ -502,13 +501,13 @@ print stats_files.get_total_file_downloads().result_data
                          {'$or': [{'type': 'DATASET_SUBMITTED'}, {'type': 'DATASET_DEPOSIT'},
                                   {'$and': [{'type': dataset_published},{'dataset': {'$ne': ''}}]},
                                   ]}},
-                    {'$lookup': {'from': 'dataset', 'localField': 'dataset', 'foreignField': 'pid', 'as': 'dataset_document'}},
                     {'$sort': {'date': 1}},
                     {'$group': {'_id': '$dataset',
                                 'date': {'$last': '$date'},
-                                'ds':{'$last': { '$arrayElemAt': ['$dataset_document', 0]}},
                                 'type': { '$push': "$type"},
                                 }},
+                    {'$lookup': {'from': 'dataset', 'localField': '_id', 'foreignField': 'pid', 'as': 'ds'}},
+                    {'$unwind': '$ds'},
                     {'$match':
                         {'$and': [
                             {'ds.datasetState' : {'$eq': 'PUBLISHED'}},
@@ -527,11 +526,10 @@ print stats_files.get_total_file_downloads().result_data
                          {'$or': [{'type': 'DATASET_SUBMITTED'}, {'type': 'DATASET_DEPOSIT'},
                                   {'$and': [{'type': dataset_published}, {'dataset': {'$ne': ''}}]},
                                   ]}},
-                    {'$lookup': {'from': 'dataset', 'localField': 'dataset', 'foreignField': 'pid',
-                                 'as': 'dataset_document'}},
                     {'$sort': {'date': 1}},
-                    {'$group': {'_id': '$dataset', 'date': {'$last': '$date'},
-                                'ds': {'$last': {'$arrayElemAt': ['$dataset_document', 0]}}}},
+                    {'$group': {'_id': '$dataset', 'date': {'$last': '$date'}}},
+                    {'$lookup': {'from': 'dataset', 'localField': '_id', 'foreignField': 'pid', 'as': 'ds'}},
+                    {'$unwind': '$ds'},
                     {'$match':
                         {'$and': [
                             {'ds.datasetState': {'$eq': 'PUBLISHED'}},
@@ -544,14 +542,13 @@ print stats_files.get_total_file_downloads().result_data
                          {'$or': [{'type': 'DATASET_SUBMITTED'}, {'type': 'DATASET_DEPOSIT'},
                                   {'$and': [{'type': dataset_published}, {'dataset': {'$ne': ''}}]},
                                   ]}},
-                    {'$lookup': {'from': 'dataset', 'localField': 'dataset', 'foreignField': 'pid',
-                                 'as': 'dataset_document'}},
                     {'$sort': {'date': 1}},
                     {'$group': {'_id': '$dataset',
                                 'date': {'$last': '$date'},
-                                'ds': {'$last': {'$arrayElemAt': ['$dataset_document', 0]}},
                                 'type': {'$push': "$type"},
                                 }},
+                    {'$lookup': {'from': 'dataset', 'localField': '_id', 'foreignField': 'pid', 'as': 'ds'}},
+                    {'$unwind': '$ds'},
                     {'$match':
                         {'$and': [
                             {'ds.datasetState': {'$eq': 'PUBLISHED'}},
