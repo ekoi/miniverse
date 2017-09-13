@@ -43,7 +43,7 @@ def view_homepage_placeholder(request):
 
 @xframe_options_exempt
 @cache_page(get_metrics_cache_time())
-def view_public_visualizations_last12(request):
+def view_public_visualizations_charts(request):
     """
     Return visualizations covering the last 11-12 months.
 
