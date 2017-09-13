@@ -18,11 +18,14 @@ from dv_apps.metrics.stats_util_files import StatsMakerFiles
 from dv_apps.metrics.stats_util_base import EASY_STATISTICS
 
 from dv_apps.utils.metrics_cache_time import get_metrics_cache_time
+from dv_apps.utils.metrics_utils import get_easy_excel_sheets
 from dv_apps.utils.date_helper import get_one_year_ago
 
 from dv_apps.metrics.forms import Metrics
 
 FIVE_HOURS = 60 * 60 * 5
+
+respdict = OrderedDict()
 
 
 """
@@ -78,65 +81,64 @@ def view_public_visualizations(request, **kwargs):
         kwargs["bulk_import_included"] = form.data.get("bulk_import_included", "bulk_included")
         noncumulative = kwargs.get('cumulative', None) == 'noncumulative'
 
-        if kwargs and len(kwargs) > 0:
-            # kwargs override GET parameters
-            stats_datasets = StatsMakerDatasets(**kwargs)
-            stats_files = StatsMakerFiles(**kwargs)
+        if form.data.get('excel'):
+            parameters = OrderedDict()
+            parameters['start date'] = kwargs["start_date"]
+            parameters['end date'] = kwargs["end_date"]
+            parameters['date type'] = kwargs["date_type"]
+            parameters['cumulative'] = kwargs["cumulative"]
+            parameters['download type'] = kwargs["downloads"]
+            parameters['bulk import'] = kwargs["bulk_import_included"]
+            graphs = [{'data': respdict['dataset_counts_by_month'], 'name': 'Dataset counts'},
+                      {'data': respdict['file_counts_by_month'], 'name': 'File counts'},
+                      {'data': respdict['file_downloads_by_month'], 'name': 'Download counts'}]
+            return get_easy_excel_sheets(parameters, graphs, 'Easy metrics.xlsx')
+
         else:
-            stats_datasets = StatsMakerDatasets(**request.GET.dict())
-            stats_files = StatsMakerFiles(**request.GET.dict())
+            if kwargs and len(kwargs) > 0:
+                # kwargs override GET parameters
+                stats_datasets = StatsMakerDatasets(**kwargs)
+                stats_files = StatsMakerFiles(**kwargs)
+            else:
+                stats_datasets = StatsMakerDatasets(**request.GET.dict())
+                stats_files = StatsMakerFiles(**request.GET.dict())
 
-        # Start an OrderedDict
-        resp_dict = OrderedDict()
+            resp_dict = respdict
 
-        # -------------------------
-        # Datasets created each month
-        # -------------------------
-        stats_monthly_ds_counts = stats_datasets.get_dataset_counts_by_create_date_published()
-        if not stats_monthly_ds_counts.has_error():
-            resp_dict['dataset_counts_by_month'] = list(stats_monthly_ds_counts.result_data['records'])
-            if noncumulative and resp_dict['dataset_counts_by_month']:
-                resp_dict['max_count_datasets'] = str(max(item['count'] for item in resp_dict['dataset_counts_by_month']))
+            # -------------------------
+            # Datasets created each month
+            # -------------------------
+            stats_monthly_ds_counts = stats_datasets.get_dataset_counts_by_create_date_published()
+            if not stats_monthly_ds_counts.has_error():
+                resp_dict['dataset_counts_by_month'] = list(stats_monthly_ds_counts.result_data['records'])
+                if noncumulative and resp_dict['dataset_counts_by_month']:
+                    resp_dict['max_count_datasets'] = str(max(item['count'] for item in resp_dict['dataset_counts_by_month']))
 
-        stats_ds_count_by_category = stats_datasets.get_dataset_category_counts_published()
-        if not stats_ds_count_by_category.has_error():
-            resp_dict['category'] = stats_datasets.get_category().capitalize()
-            resp_dict['dataset_counts_by_category'] = stats_ds_count_by_category.result_data['records']
+            stats_ds_count_by_category = stats_datasets.get_dataset_category_counts_published()
+            if not stats_ds_count_by_category.has_error():
+                resp_dict['category'] = stats_datasets.get_category().capitalize()
+                resp_dict['dataset_counts_by_category'] = stats_ds_count_by_category.result_data['records']
 
-        # -------------------------
-        # Files created, by month
-        # -------------------------
-        stats_monthly_file_counts = stats_files.get_file_count_by_month_published()
-        if not stats_monthly_file_counts.has_error():
-            resp_dict['file_counts_by_month'] = list(stats_monthly_file_counts.result_data['records'])
-            if noncumulative and resp_dict['file_counts_by_month']:
-                resp_dict['max_count_files'] = str(max(item['count'] for item in resp_dict['file_counts_by_month']))
+            # -------------------------
+            # Files created, by month
+            # -------------------------
+            stats_monthly_file_counts = stats_files.get_file_count_by_month_published()
+            if not stats_monthly_file_counts.has_error():
+                resp_dict['file_counts_by_month'] = list(stats_monthly_file_counts.result_data['records'])
+                if noncumulative and resp_dict['file_counts_by_month']:
+                    resp_dict['max_count_files'] = str(max(item['count'] for item in resp_dict['file_counts_by_month']))
 
-        # ------------------------------------------------------
-        # Datasets (or just one file of it) downloaded, by month
-        # ------------------------------------------------------
-        stats_monthly_downloads = stats_files.get_file_downloads_by_month_published(include_pre_dv4_downloads=True)
-        if not stats_monthly_downloads.has_error():
-            resp_dict['file_downloads_by_month'] = list(stats_monthly_downloads.result_data['records'])
-            if noncumulative and resp_dict['file_downloads_by_month']:
-                resp_dict['max_count_downloads'] = str(max(item['count'] for item in resp_dict['file_downloads_by_month']))
+            # ------------------------------------------------------
+            # Datasets (or just one file of it) downloaded, by month
+            # ------------------------------------------------------
+            stats_monthly_downloads = stats_files.get_file_downloads_by_month_published(include_pre_dv4_downloads=True)
+            if not stats_monthly_downloads.has_error():
+                resp_dict['file_downloads_by_month'] = list(stats_monthly_downloads.result_data['records'])
+                if noncumulative and resp_dict['file_downloads_by_month']:
+                    resp_dict['max_count_downloads'] = str(max(item['count'] for item in resp_dict['file_downloads_by_month']))
 
-        # # ----------------------------
-        # # Dataset deposits  each month
-        # # ----------------------------
-        # # inclusive bulk deposits
-        # stats_monthly_deposit_counts = stats_datasets.get_easy_dataset_count_by_month()
-        # if not stats_monthly_deposit_counts.has_error():
-        #     resp_dict['deposit_counts_by_month'] = list(stats_monthly_deposit_counts.result_data['records'])
-        #     if noncumulative and resp_dict['deposit_counts_by_month']:
-        #         resp_dict['max_count_deposits'] = str(max(item['count'] for item in resp_dict['deposit_counts_by_month']))
-        # # exclusive bulk deposits
-        # # stats_monthly_deposit_counts = stats_datasets.get_easy_deposit_count_by_month(True)
-        # # if not stats_monthly_deposit_counts.has_error():
-        # #     resp_dict['deposit_counts_by_month_no_bulk'] = list(stats_monthly_deposit_counts.result_data['records'])
-
-        resp_dict['form'] = form
-        return render(request, 'metrics/metrics_easy.html', resp_dict)
+            resp_dict['form'] = form
+            return render(request, 'metrics/metrics_easy.html', resp_dict)
 
 
     else:       # DATAVERSE
