@@ -44,21 +44,25 @@ def view_homepage_placeholder(request):
 @xframe_options_exempt
 @cache_page(get_metrics_cache_time())
 def view_public_visualizations_charts(request):
-    """
-    Return visualizations covering the last 11-12 months.
 
-    e.g. If it's July 23, 2016, it will start from June 1, 2015
-    e.g. If it's June 2, 2016, it will start from May 1, 2015
-    """
-    # one year ago
-    #
-    one_year_ago = get_one_year_ago(datetime.now())
+    if EASY_STATISTICS:
+        return view_public_visualizations(request)
+    else:
+        """
+        Return visualizations covering the last 11-12 months.
+    
+        e.g. If it's July 23, 2016, it will start from June 1, 2015
+        e.g. If it's June 2, 2016, it will start from May 1, 2015
+        """
+        # one year ago
+        #
+        one_year_ago = get_one_year_ago(datetime.now())
 
-    # start from the 1st day of last year's month
-    #
-    filters = dict(start_date=one_year_ago.strftime('%Y-%m-01'))
+        # start from the 1st day of last year's month
+        #
+        filters = dict(start_date=one_year_ago.strftime('%Y-%m-01'))
 
-    return view_public_visualizations(request, **filters)
+        return view_public_visualizations(request, **filters)
 
 
 @cache_page(get_metrics_cache_time())
