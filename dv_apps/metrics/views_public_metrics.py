@@ -237,7 +237,7 @@ def view_public_visualizations_last12_dataverse_org(request):
     if not request.GET.get('iframe', None):
         return HttpResponseRedirect('http://dataverse.org')
 
-    return view_public_visualizations_last12(request)
+    return view_public_visualizations_charts(request)
 
 
 def view_file_extensions_within_type(request, file_type='application/octet-stream'):
