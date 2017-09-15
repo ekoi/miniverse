@@ -117,6 +117,8 @@ def view_public_visualizations(request, **kwargs):
                 resp_dict['dataset_counts_by_month'] = list(stats_monthly_ds_counts.result_data['records'])
                 if noncumulative and resp_dict['dataset_counts_by_month']:
                     resp_dict['max_count_datasets'] = str(max(item['count'] for item in resp_dict['dataset_counts_by_month']))
+                else:
+                    resp_dict['max_count_datasets'] = None
 
             stats_ds_count_by_category = stats_datasets.get_dataset_category_counts_published()
             if not stats_ds_count_by_category.has_error():
@@ -131,6 +133,8 @@ def view_public_visualizations(request, **kwargs):
                 resp_dict['file_counts_by_month'] = list(stats_monthly_file_counts.result_data['records'])
                 if noncumulative and resp_dict['file_counts_by_month']:
                     resp_dict['max_count_files'] = str(max(item['count'] for item in resp_dict['file_counts_by_month']))
+                else:
+                    resp_dict['max_count_files'] = None
 
             # ------------------------------------------------------
             # Datasets (or just one file of it) downloaded, by month
@@ -140,6 +144,8 @@ def view_public_visualizations(request, **kwargs):
                 resp_dict['file_downloads_by_month'] = list(stats_monthly_downloads.result_data['records'])
                 if noncumulative and resp_dict['file_downloads_by_month']:
                     resp_dict['max_count_downloads'] = str(max(item['count'] for item in resp_dict['file_downloads_by_month']))
+                else:
+                    resp_dict['max_count_downloads'] = None
 
             resp_dict['form'] = form
             return render(request, 'metrics/metrics_easy.html', resp_dict)
