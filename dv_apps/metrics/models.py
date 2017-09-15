@@ -5,8 +5,9 @@ from django.db import models
 CATEGORY_CHOICES = (
     ('audience', 'Audience'),
     ('rights', 'Rights'),
-    ('depositStatus', 'Deposit Status'),
-    ('mimeType', 'Mime Type'),
+    ('datasetState', 'Deposit Status'),
+    ('format', 'Format'),
+    ('creator', 'Creator'),
 )
 DOWLOADS_CHOICES = (
     ('datasets', '(Part of) dataset'),
@@ -53,7 +54,6 @@ END_DATE_CHOICES = (
     ('2016-12-31', '2016-12-31'),
     ('2017-12-31', '2017-12-31'),
     ('2099-12-31', '2099-12-31'),
-    ('2015-01-31', '2015-01-31'),
 )
 
 

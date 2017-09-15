@@ -120,6 +120,9 @@ def view_public_visualizations(request, **kwargs):
                 else:
                     resp_dict['max_count_datasets'] = None
 
+            # --------------------
+            # Datasets by category
+            # --------------------
             stats_ds_count_by_category = stats_datasets.get_dataset_category_counts_published()
             if not stats_ds_count_by_category.has_error():
                 resp_dict['category'] = stats_datasets.get_category().capitalize()
