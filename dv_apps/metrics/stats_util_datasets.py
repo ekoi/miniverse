@@ -29,6 +29,7 @@ from dv_apps.dvobjects.models import DvObject\
     , DTYPE_DATASET, DTYPE_DATAVERSE\
     , DVOBJECT_CREATEDATE_ATTR
 from dv_apps.metrics.stats_result import StatsResult, logging
+from dv_apps.utils.metrics_utils import AUDIENCE
 
 class StatsMakerDatasets(StatsMakerBase):
 
@@ -493,8 +494,15 @@ class StatsMakerDatasets(StatsMakerBase):
             else:
                 counts = list(self.easy_dataset.aggregate(pipeline=pipe))
 
+        for count in counts:
+            self.get_audience_name(count)
         return counts
 
+
+
+    def get_audience_name(self, count):
+        if AUDIENCE.get(count['category']):
+            count['category'] = AUDIENCE.get(count['category'])
 
     def get_dataverse_dataset_subject_counts(self,  **extra_filters):
 

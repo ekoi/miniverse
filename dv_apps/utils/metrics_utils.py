@@ -2,6 +2,12 @@ import StringIO
 import pandas as pd
 from django.http import HttpResponse
 
+AUDIENCE = {"D20000": "Life sciences, medicine and health care", "D30000": "Humanities", "D33000": "Theology and religious studies", "D34000": "History",
+            "D34300": "Modern and contemporary history", "D36000": "Language and literature studies",
+            "D37000": "Archaeology", "D41000": "Science of law", "D41300": "Criminal (procedural) law and criminology",
+            "D50000": "Behavioural and educational sciences", "D51000": "Psychology", "D60000": "Social sciences", "D61000": "Sociology",
+            "D63000": "Cultural anthropology", "D64000": "Demography", "D64000": "Demography", "D70000": "Economics and Business Administration"}
+
 
 def get_easy_excel_sheets(parameters, graphs, name):
 
