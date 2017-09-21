@@ -88,6 +88,10 @@ DATABASES = {
     }
 }
 
+# -----------------------------------
+# EASY statistics?
+# -----------------------------------
+EASY_STATISTICS = False
 
 # -----------------------------------
 # Need when running DEBUG = False
