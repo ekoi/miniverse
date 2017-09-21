@@ -76,4 +76,4 @@ class Metrics(forms.ModelForm):
 
     class Meta:
         model = Metrics
-        fields = ['category', 'start_date', 'end_date', 'downloads', 'cumulative']
+        fields = ['category', 'start_date', 'end_date', 'downloads', 'cumulative', 'date_type', 'bulk_import_included']

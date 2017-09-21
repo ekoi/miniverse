@@ -35,7 +35,7 @@ urlpatterns = [
     # views_public_metrics
     url(r'^basic-viz$', views_public_metrics.view_public_visualizations, name='view_public_visualizations'),
 
-    url(r'^basic-viz/last12$', views_public_metrics.view_public_visualizations_last12, name='view_public_visualizations_last12'),
+    url(r'^basic-viz/charts$', views_public_metrics.view_public_visualizations_charts, name='view_public_visualizations_charts'),
 
     url(r'^basic-viz/last12-dataverse-org$',
         views_public_metrics.view_public_visualizations_last12_dataverse_org, name='view_public_visualizations_last12_dataverse_org'),

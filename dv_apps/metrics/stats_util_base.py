@@ -79,10 +79,18 @@ class StatsMakerBase(object):
         # load dates
         self.load_dates_from_kwargs(**kwargs)
 
-        # total count beginning point relative vs. from very beginning
-        self.total_count_relative = kwargs.get('relative', None) == 'true'
-        self.cumulative = kwargs.get('cumulative', None) == 'cumulative'
+        # cumulative type / noncumulative
+        self.cumulative_begin = kwargs.get('cumulative', None) == 'cumulative_begin'
+        self.noncumulative = kwargs.get('cumulative', None) == 'noncumulative'
+
+        # download type
         self.file_downloads = kwargs.get('downloads', None) == 'files'
+
+        # date type
+        self.publish_date = kwargs.get('date_type', None) == 'publish'
+
+        # import type
+        self.bulk_import_included = kwargs.get('bulk_import_included', None) == 'bulk_included'
 
         if EASY_STATISTICS:
             self.easy_dataset = client.get_database('easy').dataset

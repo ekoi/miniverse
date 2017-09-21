@@ -2,6 +2,7 @@
 <div id="viz-dataset_counts_by_month" class="viz"></div>
 <script>
 
+  var max_count_datasets = Number("{{max_count_datasets}}")
   var datasets_by_month = [
     {%for i in dataset_counts_by_month%}
 
@@ -20,7 +21,6 @@
     {"name": "Monthly Datasets", "hex": "#ffcc00"}
   ]
 
-
   $( document ).ready(function() {
 
       var visualization = d3plus.viz()
@@ -30,7 +30,7 @@
         .id("name")         // key for which our data is unique on
         .text({"html":"true", "value":"display_name"})       // key to use for display text
         .y({"value" : "Number of Datasets",
-            "range": get_metrics_viz_range(datasets_by_month, 1000) })         // key to use for y-axis
+            "range": get_metrics_viz_range(datasets_by_month, 1000, max_count_datasets) })         // key to use for y-axis
         .x({"value":"Month"})          // key to use for x-axis
         .attrs(dataset_attributes)
         .color("hex")
