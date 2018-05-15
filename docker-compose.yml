@@ -1,0 +1,18 @@
+version: '2'
+  
+services:
+    postgres:
+        image: vtycloud/postgres
+        container_name: db
+        ports:
+        - "5435:5432"
+        volumes:
+        - ./data/db:/var/lib/postgresql/data
+
+    django:
+        container_name: django
+        build: django
+        ports:
+        - "8000:8000"
+        environment:
+          - "SOLR_HOST=solr"
