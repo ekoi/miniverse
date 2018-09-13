@@ -17,9 +17,16 @@
 <!-- Latest compiled and minified JavaScript -->
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
 
-<script src="{% static "metrics/d3plus/js/topojson.min.js" %}"></script>
-<script src="{% static "metrics/d3plus/js/d3.min.js" %}"></script>
-<script src="{% static "metrics/d3plus/js/d3plus.full.min.js" %}"></script>
+<script src="/static/metrics/d3plus/js/topojson.min.js"></script>
+<script src="/static/metrics/d3plus/js/d3.min.js"></script>
+<script src="/static/metrics/d3plus/js/d3plus.full.min.js"></script>
+<style>
+@media (min-width: 1200px) {
+    .container{
+        max-width: 970px;
+    }
+}
+</style>
 <script>
 
   function get_metrics_viz_range(metric_array, mod_num){
@@ -44,24 +51,48 @@
       padding:0;
       margin:3em;
   }
+.main div {
+  width: 600px;
+  margin-left: 50px;
+  display: inline-block;
+}
+.mh1 div {
+  width: 60vh; /* 30% of viewport height*/
+  margin: 10px;
+}
 </style>
 </head>
 
 <body>
 
 <!-- START: container -->
-    <div class="container">
+    <div class="container-fluid">
+<nav class="navbar navbar-fixed-top navbar-light bg-primary">
+  <div class="row">
+    <img  width="5%" height="5%" src="https://dataverse.nl/resources/images/DataversNL-logo.png" style="margin-left:50px;display: inline-block;">
+  </div>
+</nav>
 
-<!-- START: Dataverses -->
-<!--
-    <div class="row">
-        <div class="col-xs-12 col-md-12">
-            <h3>Dataverses</h3>
-        </div>
-    </div>
--->
+        <div class="col-6 col-md-2 sidebar-offcanvas" id="sidebar">
+          <div class="list-group">
+	    <a href="#" class="list-group-item active">Institutions</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=University of Twente" class="list-group-item">University of Twente</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=Utrecht University" class="list-group-item">Utrecht University</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=NIOO-KNAW" class="list-group-item">NIOO-KNAW</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=Delft University" class="list-group-item">Delft University</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=Eindhoven University" class="list-group-item">Eindhoven University</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=Vrije Universiteit Amsterdam" class="list-group-item">Vrije Universiteit Amsterdam</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=Tilburg University" class="list-group-item">Tilburg University</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=Erasmus University Rotterdam" class="list-group-item">Erasmus University Rotterdam</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=AVANS Hogeschool" class="list-group-item">AVANS Hogeschool</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=Hogeschool Windesheim" class="list-group-item">Hogeschool Windesheim</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=Maastricht University" class="list-group-item">Maastricht University</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=University of Groningen" class="list-group-item">University of Groningen</a>
+          </div>
+    </div><!--/span-->
 
-    <div class="row">
+<div class="container">
+    <div class="row mh1">
         <div class="col-xs-12 col-md-6">
         {% include "metrics/visualizations/dataverses.html" %}
         </div>
@@ -70,19 +101,8 @@
         {% include "metrics/visualizations/dataverses_categories.html" %}
         </div>
     </div>
-<!-- END: Dataverses -->
 
- <!-- START: Datasets -->
- <!--
- <hr>
-
-  <div class="row">
-        <div class="col-xs-12 col-md-12">
-            <h3>Datasets</h3>
-        </div>
-    </div>
--->
-    <div class="row">
+    <div class="row mh1">
         <div class="col-xs-12 col-md-6">
         {% include "metrics/visualizations/datasets.html" %}
         </div>
@@ -105,7 +125,7 @@
         </div>
     </div>
 -->
-    <div class="row">
+    <div class="row mh1">
       <div class="col-xs-12 col-md-6">
         {% include "metrics/visualizations/files_added.html" %}
       </div>
@@ -114,17 +134,9 @@
           {% include "metrics/visualizations/files_downloads.html" %}
       </div>
     </div>
+</div>
 <!-- END: Files -->
-
-
- <!-- START: Footer/Timestamp -->
-    <div class="row">
-      <div class="col-xs-12">
-          <p class="help-block small">
-              Data used is published and available through the Dataverse API. Stats generated: {% now "jS F Y H:i T" %}
-          </p>
-      </div>
-    </div>
+</div>
 <!-- END: Footer/Timestamp -->
 
   </div>
@@ -132,5 +144,7 @@
 {% if not DEBUG %}
     {% include "metrics/google_analytics.html" %}
 {% endif %}
+<script src="/static/offcanvas.js"></script>
+ <link href="/static/offcanvas.css" rel="stylesheet">
 </body>
 </html>
