@@ -17,11 +17,13 @@ def view_dataverse_list(request, output_format='xlsx', **kwargs):
     filter_params = {}
 
     published_only = kwargs.get('published_only', True)
+    affiliation = request.GET.get('affiliation', '') #kwargs.get('affiliation', '')
+    output_format = ''
 
     if published_only:
         filter_params.update(query_helper.get_is_published_filter_param())
 
-    vals = ['id', 'name', 'alias', 'dataversetype', 'createdate', 'publicationdate' ]
+    vals = ['id', 'name', 'alias', 'affiliation', 'dataversetype', 'createdate', 'publicationdate' ]
 
     dlist = Dataverse.objects.select_related('dvobject'\
                 ).filter(**filter_params
@@ -36,6 +38,8 @@ def view_dataverse_list(request, output_format='xlsx', **kwargs):
 
     df['dataverse_url'] = df['alias'].apply(lambda x: 'https://dataverse.harvard.edu/dataverse/%s' %  x)
     vals.append('dataverse_url')
+    if affiliation:
+	df = df.loc[df['affiliation'] == affiliation]
 
     if output_format == 'xlsx':
         excel_string_io = StringIO.StringIO()
@@ -62,5 +66,7 @@ def view_dataverse_list(request, output_format='xlsx', **kwargs):
         response['Content-Disposition'] = 'attachment; filename=%s' % xlsx_fname
 
         return response
+    else:
+	return HttpResponse(df.to_html())
 
     return HttpResponse('Sorry.  This format is not recognized: %s' % output_format)

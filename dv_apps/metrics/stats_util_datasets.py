@@ -103,6 +103,7 @@ class StatsMakerDatasets(StatsMakerBase):
             for k, v in extra_filters.items():
                 filter_params[k] = v
 
+	#filter_params['id'] = 
         return self.get_dataset_count_by_month(date_param=DVOBJECT_CREATEDATE_ATTR,\
             **extra_filters)
 
@@ -191,10 +192,22 @@ class StatsMakerDatasets(StatsMakerBase):
         # (2) Construct query
         # -----------------------------------
 
+        # DANS
+        aff_ids = Dataverse.objects.select_related('dvobject'\
+                            ).filter(**filter_params)\
+                           .values_list('dvobject__id', flat=True)
+        if 'affiliation' in filter_params:
+            del(filter_params['affiliation'])
+
+        df_ids = DvObject.objects.select_related('Dataverse'\
+                            ).filter(dvobject__owner_id__in=aff_ids\
+                            ).filter(**filter_params)\
+                           .values_list('dvobject__id', flat=True)
         # add exclude filters date filters
         #
         ds_counts_by_month = Dataset.objects.select_related('dvobject'\
                             ).exclude(**exclude_params\
+			    ).filter(dvobject_id__in=df_ids\
                             ).filter(**filter_params)
 
         # annotate query adding "month_year" and "cnt"
@@ -461,8 +474,26 @@ class StatsMakerDatasets(StatsMakerBase):
         # -----------------------------
         # Retrieve Dataset ids by time and published/unpublished
         # -----------------------------
+        # DANS
+        aff_ids = Dataverse.objects.select_related('dvobject'\
+                            ).filter(**filter_params)\
+                           .values_list('dvobject__id', flat=True)
+        if 'affiliation' in filter_params:
+            del(filter_params['affiliation'])
+
+        df_ids = DvObject.objects.select_related('Dataverse'\
+                            ).filter(dvobject__owner_id__in=aff_ids\
+                            ).filter(**filter_params)\
+                           .values_list('dvobject__id', flat=True)
+
+        fdataset_ids = Dataset.objects.select_related('dvobject'\
+                            ).filter(dvobject__owner_id__in=df_ids\
+                            ).filter(**filter_params)\
+                           .values_list('dvobject__id', flat=True)
+
         dataset_ids = Dataset.objects.select_related('dvobject'\
                         ).filter(**filter_params\
+			).filter(dvobject__id__in=fdataset_ids\
                         ).values_list('dvobject__id', flat=True)
 
 

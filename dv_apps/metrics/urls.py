@@ -72,6 +72,10 @@ urlpatterns = [
         views_test.view_dataverse_tree,
         name='view_dataverse_tree'),
 
+    url(r'^dv-hierarchy$',
+        views_test.view_dataverse_htree,
+        name='view_dataverse_htree'),
+
     url(r'^dv-tree2$',
         views_test.view_dataverse_tree2,
         name='view_dataverse_tree2'),

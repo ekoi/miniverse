@@ -2,6 +2,7 @@ from django.db import models
 from django.utils.encoding import python_2_unicode_compatible
 
 from dv_apps.dvobjects.models import DvObject
+from dv_apps.dataverses.models import Dataverse
 from dv_apps.datasets.models import DatasetVersion
 
 INGEST_STATUS_NONE = 'A' # ASCII 65
@@ -11,11 +12,15 @@ INGEST_STATUS_ERROR = 'D' # ASCII 68
 
 class Datafile(models.Model):
     dvobject = models.OneToOneField(DvObject, db_column='id', primary_key=True)
+    #id = models.AutoField(primary_key=True)
+    #dataverse = models.OneToOneField(Dataverse, db_column='id') #, primary_key=True)
     name = models.CharField(max_length=255, blank=True, null=True)
     contenttype = models.CharField(max_length=255)
     filesystemname = models.CharField(max_length=255)
     filesize = models.BigIntegerField(blank=True, null=True)
+    affiliation = models.CharField(max_length=255)
     ingeststatus = models.CharField(max_length=1, blank=True, null=True)
+    #dataverse = models.ForeignKey(Dataverse, null=True) #, to_field='id') #,  db_column='id', primary_key=True)
 
     checksumvalue = models.CharField(max_length=255)
     checksumtype = models.CharField(max_length=255)

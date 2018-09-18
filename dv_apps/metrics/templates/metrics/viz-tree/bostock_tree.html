@@ -1,7 +1,25 @@
 {% load staticfiles %}
 <!DOCTYPE html>
 <meta charset="utf-8">
+<script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+<script src="/static/offcanvas.js"></script>
+<link href="/static/offcanvas.css" rel="stylesheet">
 <style>
+
+@media (min-width: 1200px) {
+    .container{
+        max-width: 970px;
+    }
+}
 
 .node rect {
   cursor: pointer;
@@ -24,10 +42,39 @@ path.link {
 
 </style>
 <body>
+    <div class="container-fluid">
+<nav class="navbar navbar-fixed-top navbar-light bg-primary">
+  <div class="row">
+    <img  width="5%" height="5%" src="https://dataverse.nl/resources/images/DataversNL-logo.png" style="margin-left:50px;display: inline-block;">
+  </div>
+</nav>
+</div>
+        <div class="col-6 col-md-2 sidebar-offcanvas" id="sidebar">
+          <div class="list-group">
+            <a href="/miniverse/metrics/basic-viz/last12" class="list-group-item active">Institutions</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=Delft University" class="list-group-item">Delft University</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=Eindhoven University" class="list-group-item">Eindhoven University</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=Erasmus University Rotterdam" class="list-group-item">Erasmus University Rotterdam</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=Hogeschool Utrecht" class="list-group-item">Hogeschool Utrecht</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=Leiden University" class="list-group-item">Leiden University</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=Maastricht University" class="list-group-item">Maastricht University</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=NIOO-KNAW" class="list-group-item">NIOO-KNAW</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=Protestantse Theologische Universiteit" class="list-group-item">Protestantse Theologische Universiteit</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=Tilburg University" class="list-group-item">Tilburg University</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=University of Groningen" class="list-group-item">University of Groningen</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=University of Twente" class="list-group-item">University of Twente</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=Utrecht University" class="list-group-item">Utrecht University</a>
+            <a href="/miniverse/metrics/basic-viz/last12?affiliation=Vrije Universiteit Amsterdam" class="list-group-item">Vrije Universiteit Amsterdam</a>
+          </div>
+    </div><!--/span-->
+<div class="container" id="main">
+
+</div>
+
 <script src="//d3js.org/d3.v3.min.js"></script>
 <script>
 
-var margin = {top: 30, right: 20, bottom: 30, left: 20},
+var margin = {top: 10, right: 20, bottom: 30, left: 20},
     width = 960 - margin.left - margin.right,
     barHeight = 20,
     barWidth = width * .8;
@@ -42,13 +89,12 @@ var tree = d3.layout.tree()
 var diagonal = d3.svg.diagonal()
     .projection(function(d) { return [d.y, d.x]; });
 
-var svg = d3.select("body").append("svg")
+var svg = d3.select("#main").append("svg")
     .attr("width", width + margin.left + margin.right)
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 //get_dataverse_tree_json
-//d3.json("{% static "metrics/viz/bostock_flare.json" %}", function(error, flare) {
 d3.json("{% url 'get_dataverse_tree_json' %}", function(error, flare) {
   if (error) throw error;
 

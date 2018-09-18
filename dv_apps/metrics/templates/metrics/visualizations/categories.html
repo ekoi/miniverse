@@ -1,7 +1,21 @@
 {% load humanize %}
 
 <div id="viz-categories" class="viz"></div>
+<div id="chart">
+  <div style="height: 4px;"></div>
+  <div style="height: 8px;"></div>
+  <div style="height: 15px;"></div>
+  <div style="height: 16px;"></div>
+  <div style="height: 23px;"></div>
+  <div style="height: 42px;"></div>
+</div>
 <script>
+d3.select('#chart')
+  .selectAll("div")
+  .data([4, 8, 15, 16, 23, 42])
+  .enter()
+  .append("div")
+  .style("height", (d)=> d + "px")
 
   var category = "{{category}}"
   var title = (category == "Mimetype") ? "Files by {{category}}"  : "Datasets by {{category}}";

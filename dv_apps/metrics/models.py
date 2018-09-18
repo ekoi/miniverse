@@ -44,7 +44,7 @@ class Metrics(models.Model):
                                 default='2008-01-01')
     end_date = models.CharField(max_length=10,
                                 choices=END_DATE_CHOICES,
-                                default='2099-12-31')
+                                default='2017-07-17')
 
     def __str__(self):
         return self.category

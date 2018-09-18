@@ -21,6 +21,12 @@ def view_metrics_links(request):
     return render(request, 'metrics/view_metrics_links.html', d)
 
 
+def view_dataverse_htree(request):
+
+    d = {}
+
+    return render(request, 'metrics/viz-tree/htree.html', d)
+
 def view_dataverse_tree(request):
 
     d = {}
