@@ -18,6 +18,7 @@ class SQLreport:
     def __init__(self, params):
         self.level_count = 1
         self.debug = True
+        self.stats = []
         self.start_date = params['start_date']
         self.end_date = params['end_date']
         self.maindir = params['sqldir']
@@ -36,6 +37,10 @@ class SQLreport:
 	    self.get_dataverse_name_sql = f.read()
         with open("%s/sql/downloads_by_month.sql" % self.maindir) as f:
 	    self.downloads_by_month_sql = f.read()
+        with open("%s/sql/get_subdataverses.sql" % self.maindir) as f:
+            self.get_subdataverses_sql = f.read()
+        with open("%s/sql/get_featureddataverses.sql" % self.maindir) as f:
+            self.get_featureddataverses_sql = f.read()
 
     ##SHEET 2
         with open("%s/sql/get_datasets.sql" % self.maindir) as f:
@@ -72,7 +77,7 @@ class SQLreport:
 	    self.get_users_by_month_affiliations_sql = f.read()
 
     #this is a recursive function allowing the drilldown of relationships from whichever level you start with - determined by dataverse_id 
-    def getSubDataverses(self, dataverse_id,level):
+    def getSubDataverses(self, dataverse_id, level):
 	#dataverse_id - the id of the root dataverse
 	#level - the current level of the root dataverse
 	cur = self.conn.cursor()
@@ -163,6 +168,17 @@ class SQLreport:
 	for r in rows:
 		return r[0]
 
+    def getFeatured_dataverses(self,affiliation=None):
+        cur = self.conn.cursor()
+        if affiliation:
+            cur.execute(self.get_featureddataverses_sql.replace("{affiliation}", " AND affiliation='%s'" % str(affiliation)))
+        else:
+            cur.execute(self.get_featureddataverses_sql.replace("{affiliation}", ''))
+        rows = cur.fetchall()
+        featured = []
+        for r in rows:
+                featured.append(r)
+        return featured
 
     def getHierarchy(self,object_id):
         cur = self.conn.cursor()
@@ -287,10 +303,12 @@ class SQLreport:
 		array.append(row[0])
 	return array
 
-    def getStatistics(self):
+    def getStatistics(self, affiliation=None):
         cur = self.conn.cursor()
-	#print "SSS " % get_statistics_sql
+        if affiliation:
+            self.get_statistics_sql+=" AND dts.affiliation = '%s'" % affiliation
         cur.execute(self.get_statistics_sql)
+        print(self.get_statistics_sql)
         rows = cur.fetchall()
 	colnames = [desc[0] for desc in cur.description]
         array=[]
@@ -299,7 +317,7 @@ class SQLreport:
                 for i in range(0, len(row)):
                     v = colnames[i]
                     datarow[v] = row[i]
-		#dvnmeta.insert(datarow)
+		self.stats.append(datarow)
                 array.append(row[0])
         return array
 
@@ -347,7 +365,7 @@ class SQLreport:
 		array.append("=SUM("+letter+"2:"+letter+str(self.ws_row_count)+")")
 	self.ws.append(array)#inject last row with totals
 	
-    def reportmaker(self):
+    def reportmaker(self,affiliation=None):
         ####create the workbook
         self.wb = Workbook()
         self.ws = self.wb.active
@@ -456,8 +474,8 @@ class SQLreport:
         self.table_header.append("Affiliation")
         self.wb.create_sheet("Users by Affiliations")
         self.ws = self.wb["Users by Affiliations"]
-        self.getAffiliationsByMonth(self.getAffiliations())
-        self.getStatistics()
+        #self.getAffiliationsByMonth(self.getAffiliations())
+        self.getStatistics(affiliation)
         self.addWorkSheetFooter(2,self.ws_cols_count+2,0)
 
 ####
