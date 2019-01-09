@@ -306,7 +306,9 @@ class SQLreport:
     def getStatistics(self, affiliation=None):
         cur = self.conn.cursor()
         if affiliation:
-            self.get_statistics_sql+=" AND dts.affiliation = '%s'" % affiliation
+            self.get_statistics_sql.replace("{affiliation}", " AND dts.affiliation = '%s'" % affiliation)
+        else:
+            self.get_statistics_sql.replace("{affiliation}", '')
         cur.execute(self.get_statistics_sql)
         print(self.get_statistics_sql)
         rows = cur.fetchall()
@@ -474,7 +476,7 @@ class SQLreport:
         self.table_header.append("Affiliation")
         self.wb.create_sheet("Users by Affiliations")
         self.ws = self.wb["Users by Affiliations"]
-        #self.getAffiliationsByMonth(self.getAffiliations())
+        self.getAffiliationsByMonth(self.getAffiliations())
         self.getStatistics(affiliation)
         self.addWorkSheetFooter(2,self.ws_cols_count+2,0)
 
